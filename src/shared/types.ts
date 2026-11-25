@@ -103,3 +103,6 @@ export const KV_MIME: Record<string, string> = {
 /** Stored KV file names are `<uuid>.<ext>` (see Library.setKv). */
 export const KV_FILE_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(png|jpg|jpeg|webp)$/
+
+/** Direction of a presentation clicker press handled while Bridgecast is in the background. */
+export type ClickerDirection = 'next' | 'prev'
