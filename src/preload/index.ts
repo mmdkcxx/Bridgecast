@@ -76,6 +76,7 @@ const api: Api = {
   onProgramState: (cb) => subscribe(Broadcast.programState, cb),
   onImportProgress: (cb) => subscribe(Broadcast.importProgress, cb),
   getSettings: () => invoke(Invoke.settingsGet),
+  setClickerBackground: (on) => invoke(Invoke.clickerSetBackground, on),
   getAppVersion: () => invoke(Invoke.appVersion),
   listDisplays: () => invoke(Invoke.displaysList),
   onDisplaysChanged: (cb) => subscribe(Broadcast.displaysChanged, cb),
@@ -152,6 +153,7 @@ const api: Api = {
   installUpdate: () => invoke(Invoke.updateInstall),
   skipUpdate: () => invoke(Invoke.updateSkip),
   onUpdateStatus: (cb) => subscribe(Broadcast.updateStatus, cb),
+  onClickerPress: (cb) => subscribe(Broadcast.clickerPress, cb),
   // File.path no longer exists in Electron; this is the supported replacement.
   pathForFile: (file) => webUtils.getPathForFile(file)
 }
