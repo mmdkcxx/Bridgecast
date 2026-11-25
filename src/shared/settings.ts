@@ -64,6 +64,16 @@ export function sanitizeWebChrome(raw: unknown): boolean {
   return typeof raw === 'boolean' ? raw : DEFAULT_WEB_CHROME
 }
 
+/**
+ * PageDown/PageUp run Next/Prev while no Bridgecast window has focus (a speaker's clicker keeps
+ * working while the operator uses another app). Off by default; applies at once.
+ */
+export const DEFAULT_CLICKER_BACKGROUND = false
+
+export function sanitizeClickerBackground(raw: unknown): boolean {
+  return typeof raw === 'boolean' ? raw : DEFAULT_CLICKER_BACKGROUND
+}
+
 export interface Settings {
   hdmi: HdmiSettings
   /** Next/Prev may leave the live deck (see ProgramState.autoAdvance). Default off. */
@@ -81,6 +91,8 @@ export interface Settings {
   pptImportFormat: PptImportFormat
   /** Linux: web decks run in the PC's Chrome (see DEFAULT_WEB_CHROME). */
   webChrome: boolean
+  /** Clicker keys work while Bridgecast is in the background (see DEFAULT_CLICKER_BACKGROUND). */
+  clickerBackground: boolean
   updates: UpdateSettings
 }
 
@@ -165,6 +177,7 @@ export function sanitizeSettings(raw: unknown): Settings {
     sendContentOnly: sanitizeSendContentOnly(r.sendContentOnly),
     pptImportFormat: sanitizePptImportFormat(r.pptImportFormat),
     webChrome: sanitizeWebChrome(r.webChrome),
+    clickerBackground: sanitizeClickerBackground(r.clickerBackground),
     updates: sanitizeUpdates(r.updates)
   }
 }

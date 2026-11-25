@@ -31,6 +31,7 @@ describe('loadSettings / saveSettings', () => {
       sendContentOnly: true,
       pptImportFormat: 'odp',
       webChrome: false,
+      clickerBackground: false,
       updates: { skippedVersion: null }
     })
     expect(loadSettings(file)).toEqual(DEFAULT_SETTINGS)
@@ -47,6 +48,7 @@ describe('loadSettings / saveSettings', () => {
       sendContentOnly: false,
       pptImportFormat: 'original' as const,
       webChrome: true,
+      clickerBackground: true,
       updates: { skippedVersion: null }
     }
     saveSettings(file, s)
@@ -95,6 +97,7 @@ describe('hdmi settings', () => {
       sendContentOnly: true,
       pptImportFormat: 'odp',
       webChrome: false,
+      clickerBackground: false,
       updates: { skippedVersion: null }
     })
   })
@@ -112,6 +115,7 @@ describe('hdmi settings', () => {
       sendContentOnly: true,
       pptImportFormat: 'odp',
       webChrome: false,
+      clickerBackground: false,
       updates: { skippedVersion: null }
     })
   })
@@ -383,5 +387,15 @@ describe('mergeAudio', () => {
   })
   it('ignores unknown keys', () => {
     expect(mergeAudio(saved, { foo: 1, muted: true })).toEqual({ ...saved, muted: true })
+  })
+})
+
+describe('clicker in the background setting', () => {
+  it('is off when missing or not a boolean, and kept when true', () => {
+    expect(loadSettings(file).clickerBackground).toBe(false)
+    fs.writeFileSync(file, '{"clickerBackground": true}')
+    expect(loadSettings(file).clickerBackground).toBe(true)
+    fs.writeFileSync(file, '{"clickerBackground": "yes"}')
+    expect(loadSettings(file).clickerBackground).toBe(false)
   })
 })

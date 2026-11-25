@@ -1420,6 +1420,10 @@ class SettingsStore {
     return this.save({ ...this.settings, webChrome })
   }
 
+  saveClickerBackground(clickerBackground: boolean): Settings {
+    return this.save({ ...this.settings, clickerBackground })
+  }
+
   saveAutoAdvance(autoAdvance: boolean): Settings {
     return this.save({ ...this.settings, autoAdvance })
   }
