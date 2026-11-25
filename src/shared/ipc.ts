@@ -2,7 +2,13 @@ import type { ClickerDirection, DeckMeta, EventMeta, EventSummary, Playback } fr
 import type { OrderItem } from './sections'
 import type { Action, ProgramState } from './program'
 import type { NdiSettings, NdiStatus, OmtSettings, OmtStatus } from './omt'
-import type { AudioSettings, HdmiSettings, PptImportFormat, Settings } from './settings'
+import type {
+  AudioSettings,
+  ClickerKeys,
+  HdmiSettings,
+  PptImportFormat,
+  Settings
+} from './settings'
 import type { DisplayInfo } from './displays'
 import type { Canvas, DeckFit } from './canvas'
 import type { NewEventOptions } from './event-outputs'
@@ -50,6 +56,7 @@ export const Invoke = {
   programGet: 'program:get',
   settingsGet: 'settings:get',
   clickerSetBackground: 'clicker:setBackground',
+  clickerSetKeys: 'clicker:setKeys',
   appVersion: 'app:version',
   displaysList: 'displays:list',
   hdmiSet: 'hdmi:set',
@@ -275,6 +282,8 @@ export interface InvokeMap {
   'settings:get': { args: []; result: Settings }
   /** Settings > Clicker in the background; applies at once. */
   'clicker:setBackground': { args: [on: boolean]; result: Settings }
+  /** Settings > Clicker keys: PageDown/PageUp or Right/Left; applies at once. */
+  'clicker:setKeys': { args: [keys: ClickerKeys]; result: Settings }
   'displays:list': { args: []; result: DisplayInfo[] }
   /** Validated in main against the connected displays; saves and applies at once. */
   'hdmi:set': { args: [hdmi: HdmiSettings]; result: Settings }
@@ -472,6 +481,7 @@ export interface Api {
   onImportProgress(cb: (p: ImportProgress) => void): () => void
   getSettings(): Promise<Settings>
   setClickerBackground(on: boolean): Promise<Settings>
+  setClickerKeys(keys: ClickerKeys): Promise<Settings>
   /** The app version (package.json), for the About section of Settings. */
   getAppVersion(): Promise<string>
   listDisplays(): Promise<DisplayInfo[]>

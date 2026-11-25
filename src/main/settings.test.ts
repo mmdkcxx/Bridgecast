@@ -32,6 +32,7 @@ describe('loadSettings / saveSettings', () => {
       pptImportFormat: 'odp',
       webChrome: false,
       clickerBackground: false,
+      clickerKeys: 'page' as const,
       updates: { skippedVersion: null }
     })
     expect(loadSettings(file)).toEqual(DEFAULT_SETTINGS)
@@ -49,6 +50,7 @@ describe('loadSettings / saveSettings', () => {
       pptImportFormat: 'original' as const,
       webChrome: true,
       clickerBackground: true,
+      clickerKeys: 'page' as const,
       updates: { skippedVersion: null }
     }
     saveSettings(file, s)
@@ -98,6 +100,7 @@ describe('hdmi settings', () => {
       pptImportFormat: 'odp',
       webChrome: false,
       clickerBackground: false,
+      clickerKeys: 'page' as const,
       updates: { skippedVersion: null }
     })
   })
@@ -116,6 +119,7 @@ describe('hdmi settings', () => {
       pptImportFormat: 'odp',
       webChrome: false,
       clickerBackground: false,
+      clickerKeys: 'page' as const,
       updates: { skippedVersion: null }
     })
   })
@@ -397,5 +401,13 @@ describe('clicker in the background setting', () => {
     expect(loadSettings(file).clickerBackground).toBe(true)
     fs.writeFileSync(file, '{"clickerBackground": "yes"}')
     expect(loadSettings(file).clickerBackground).toBe(false)
+  })
+
+  it('uses PageDown/PageUp unless the arrow keys were chosen', () => {
+    expect(loadSettings(file).clickerKeys).toBe('page')
+    fs.writeFileSync(file, '{"clickerKeys": "arrows"}')
+    expect(loadSettings(file).clickerKeys).toBe('arrows')
+    fs.writeFileSync(file, '{"clickerKeys": "space"}')
+    expect(loadSettings(file).clickerKeys).toBe('page')
   })
 })

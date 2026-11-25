@@ -92,6 +92,7 @@ import {
   sanitizePptImportFormat,
   sanitizeSettings,
   type AudioSettings,
+  type ClickerKeys,
   type HdmiSettings,
   type PptImportFormat
 } from '../shared/settings'
@@ -1426,6 +1427,10 @@ class SettingsStore {
     return this.save({ ...this.settings, clickerBackground })
   }
 
+  saveClickerKeys(clickerKeys: ClickerKeys): Settings {
+    return this.save({ ...this.settings, clickerKeys })
+  }
+
   saveAutoAdvance(autoAdvance: boolean): Settings {
     return this.save({ ...this.settings, autoAdvance })
   }
@@ -2071,8 +2076,8 @@ Location: ${root}`
     webChrome
   )
 
-  // Settings > Clicker in the background: PageDown/PageUp run Next/Prev while no Bridgecast
-  // window has focus. The press goes to the operator window, which applies its usual key guards.
+  // Settings > Clicker in the background: the clicker keys (PageDown/PageUp or Right/Left) run
+  // Next/Prev while no Bridgecast window has focus. The press goes to the operator window, which applies its usual key guards.
   const clicker = new BackgroundClicker(
     {
       register: (accel, cb) => globalShortcut.register(accel, cb),
@@ -2080,6 +2085,7 @@ Location: ${root}`
     },
     (d) => broadcastToOperator(Broadcast.clickerPress, d)
   )
+  clicker.setKeys(settings.get().clickerKeys)
   clicker.setEnabled(settings.get().clickerBackground)
   clicker.setAppFocused(BrowserWindow.getFocusedWindow() !== null)
   app.on('browser-window-focus', () => clicker.setAppFocused(true))
@@ -2092,6 +2098,13 @@ Location: ${root}`
     if (typeof on !== 'boolean') throw new Error('Clicker setting must be on or off')
     const saved = settings.saveClickerBackground(on)
     clicker.setEnabled(on)
+    return saved
+  })
+  handle(Invoke.clickerSetKeys, (keys) => {
+    if (keys !== 'page' && keys !== 'arrows')
+      throw new Error('Choose PageDown/PageUp or the arrow keys')
+    const saved = settings.saveClickerKeys(keys)
+    clicker.setKeys(keys)
     return saved
   })
 

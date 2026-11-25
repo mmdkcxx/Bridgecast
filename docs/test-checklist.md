@@ -38,6 +38,7 @@ Catat hasil tiap butir: **OK**, atau tulis apa yang terjadi.
 - [ ] Setting hidup, operator di Home lalu klik Notepad: clicker tidak menggeser apa pun.
 - [ ] Matikan setting (Bridgecast lalu kembali ke Notepad): PageDown kembali menggulir Notepad.
 - [ ] Setting hidup, tutup Bridgecast: PageDown kembali bekerja normal di semua aplikasi.
+- [ ] Perfect Cue (panah kanan/kiri): Settings > "Clicker keys" pilih "Right / Left arrows", Notepad di depan: maju/mundur Perfect Cue menggeser slide; PageDown kembali menggulir Notepad. Ganti ke "PageDown / PageUp" saat Bridgecast di latar belakang (dari jendela Prepare): panah kembali menggerakkan kursor di Notepad.
 - [ ] "Continue to next deck" mati: clicker di slide terakhir tidak pindah ke deck berikutnya. Hidupkan: clicker lanjut ke deck berikutnya. Tutup dan buka aplikasi: pilihannya tetap.
 - [ ] Sections: buat event dengan beberapa deck, klik "Add section" dan beri nama. Hidupkan "Continue to next deck", lalu pakai clicker sampai slide terakhir sebelum section. Clicker harus berhenti di sana, panel "Up next" menampilkan "End of section". Tombol N pindah ke section berikutnya, Shift+N kembali.
 - [ ] Cabut kabel HDMI saat live. Layar operator tidak tertutup; status menjadi "HDMI hidden".

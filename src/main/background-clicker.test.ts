@@ -114,6 +114,52 @@ describe('BackgroundClicker', () => {
     expect(warn).toHaveBeenCalledTimes(1)
   })
 
+  it('uses the arrow keys when the clicker sends Right and Left', () => {
+    const { port, callbacks } = fakePort()
+    const onPress = vi.fn()
+    const clicker = new BackgroundClicker(port, onPress, vi.fn())
+
+    clicker.setKeys('arrows')
+    clicker.setEnabled(true)
+    clicker.setAppFocused(false)
+
+    expect(clicker.registered()).toEqual(['Right', 'Left'])
+    callbacks.get('Right')!()
+    expect(onPress).toHaveBeenCalledWith('next')
+    callbacks.get('Left')!()
+    expect(onPress).toHaveBeenLastCalledWith('prev')
+    expect(port.register).not.toHaveBeenCalledWith('PageDown', expect.anything())
+  })
+
+  it('swaps the keys at once when the choice changes while in the background', () => {
+    const { port } = fakePort()
+    const clicker = new BackgroundClicker(port, vi.fn(), vi.fn())
+
+    clicker.setEnabled(true)
+    clicker.setAppFocused(false)
+    clicker.setKeys('arrows')
+
+    expect(port.unregister).toHaveBeenCalledWith('PageDown')
+    expect(port.unregister).toHaveBeenCalledWith('PageUp')
+    expect(clicker.registered()).toEqual(['Right', 'Left'])
+
+    port.register.mockClear()
+    clicker.setKeys('arrows')
+    expect(port.register).not.toHaveBeenCalled()
+  })
+
+  it('changes the choice without registering while Bridgecast has focus', () => {
+    const { port } = fakePort()
+    const clicker = new BackgroundClicker(port, vi.fn(), vi.fn())
+
+    clicker.setEnabled(true)
+    clicker.setKeys('arrows')
+
+    expect(port.register).not.toHaveBeenCalled()
+    clicker.setAppFocused(false)
+    expect(clicker.registered()).toEqual(['Right', 'Left'])
+  })
+
   it('releases on dispose and stays off afterwards', () => {
     const { port } = fakePort()
     const clicker = new BackgroundClicker(port, vi.fn(), vi.fn())

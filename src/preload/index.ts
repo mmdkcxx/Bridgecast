@@ -77,6 +77,7 @@ const api: Api = {
   onImportProgress: (cb) => subscribe(Broadcast.importProgress, cb),
   getSettings: () => invoke(Invoke.settingsGet),
   setClickerBackground: (on) => invoke(Invoke.clickerSetBackground, on),
+  setClickerKeys: (keys) => invoke(Invoke.clickerSetKeys, keys),
   getAppVersion: () => invoke(Invoke.appVersion),
   listDisplays: () => invoke(Invoke.displaysList),
   onDisplaysChanged: (cb) => subscribe(Broadcast.displaysChanged, cb),

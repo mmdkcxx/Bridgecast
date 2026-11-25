@@ -29,6 +29,10 @@ Saat show berjalan, operator sering pindah ke aplikasi lain (menyiapkan file ses
 - **Tes**: unit test untuk logika register/unregister (diekstrak ke fungsi murni dengan `globalShortcut` palsu) dan sanitize setting. E2E tidak bisa menekan tombol global; tambahkan cek manual di `docs/test-checklist.md` (Windows: fokus ke Notepad, clicker maju/mundur; Bridgecast fokus: tidak ada aksi ganda; setting mati: tidak ada efek).
 - **Docs**: `PRODUCT.md` (perilaku clicker), `CHANGELOG.md`.
 
+## Tambahan 2026-11-26: pilihan tombol
+
+User memakai Perfect Cue (default kirim panah kanan/kiri). Setting baru `clickerKeys: 'page' | 'arrows'` (default `page`) di bawah switch, Segmented "Clicker keys": PageDown / PageUp atau Right / Left arrows. Hanya pasangan yang dipilih yang didaftarkan global; ganti pilihan saat aktif langsung menukar tombol. Panah atas/bawah tetap tidak pernah diambil. Trade-off untuk `arrows`: panah kiri/kanan tidak menggerakkan kursor di aplikasi lain selama aktif.
+
 ## Diserahkan ke builder
 
 Teks keterangan switch, posisi di SettingsDialog (dekat pengaturan keyboard/output), nama channel IPC, dan struktur unit test.

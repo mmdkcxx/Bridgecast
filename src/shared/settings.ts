@@ -74,6 +74,15 @@ export function sanitizeClickerBackground(raw: unknown): boolean {
   return typeof raw === 'boolean' ? raw : DEFAULT_CLICKER_BACKGROUND
 }
 
+/** Keys the clicker sends: PageDown/PageUp (most clickers) or the Right/Left arrows. */
+export type ClickerKeys = 'page' | 'arrows'
+
+export const DEFAULT_CLICKER_KEYS: ClickerKeys = 'page'
+
+export function sanitizeClickerKeys(raw: unknown): ClickerKeys {
+  return raw === 'page' || raw === 'arrows' ? raw : DEFAULT_CLICKER_KEYS
+}
+
 export interface Settings {
   hdmi: HdmiSettings
   /** Next/Prev may leave the live deck (see ProgramState.autoAdvance). Default off. */
@@ -93,6 +102,8 @@ export interface Settings {
   webChrome: boolean
   /** Clicker keys work while Bridgecast is in the background (see DEFAULT_CLICKER_BACKGROUND). */
   clickerBackground: boolean
+  /** Which keys the background clicker listens to (see ClickerKeys). */
+  clickerKeys: ClickerKeys
   updates: UpdateSettings
 }
 
@@ -178,6 +189,7 @@ export function sanitizeSettings(raw: unknown): Settings {
     pptImportFormat: sanitizePptImportFormat(r.pptImportFormat),
     webChrome: sanitizeWebChrome(r.webChrome),
     clickerBackground: sanitizeClickerBackground(r.clickerBackground),
+    clickerKeys: sanitizeClickerKeys(r.clickerKeys),
     updates: sanitizeUpdates(r.updates)
   }
 }
