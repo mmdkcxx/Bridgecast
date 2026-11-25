@@ -4,6 +4,9 @@
 name: macOS build
 
 on:
+  # Test builds: a push to this branch builds the disks and keeps them as a workflow artifact.
+  push:
+    branches: [test/mac-build]
   release:
     types: [published]
   workflow_dispatch:
