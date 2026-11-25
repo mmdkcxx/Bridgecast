@@ -697,7 +697,7 @@ function registerIpc(
     }
   })
 
-  // macOS: PowerPoint files become a PDF in main (Keynote, else LibreOffice); the renderer draws
+  // macOS: PowerPoint files become a PDF in main (PowerPoint, else Keynote, else LibreOffice); the renderer draws
   // the pages. The temp PDF is remembered here with the PowerPoint file it came from, so
   // addRendered can keep that file as original.* (a renderer path is never trusted for it).
   const converted = new Map<string, { dir: string; original: string }>()

@@ -59,7 +59,7 @@ mac:
     - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
     - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
-    - NSAppleEventsUsageDescription: Bridgecast uses Keynote to convert PowerPoint files to PDF when you import them.
+    - NSAppleEventsUsageDescription: Bridgecast uses Microsoft PowerPoint or Keynote to convert PowerPoint files to PDF when you import them.
   notarize: false
 dmg:
   # One disk per architecture: the arch keeps the Intel and Apple silicon files apart.

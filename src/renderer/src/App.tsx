@@ -563,7 +563,7 @@ function App({
     [api, upsertImport, reloadDecks]
   )
 
-  // macOS: main converts the PowerPoint file to a PDF (Keynote, else LibreOffice), then it is
+  // macOS: main converts the PowerPoint file to a PDF (PowerPoint, else Keynote, else LibreOffice), then it is
   // imported as any PDF deck; main keeps the PowerPoint file as original.*.
   const importMacPptx = useCallback(
     async (target: string, id: string, f: File, file: string) => {

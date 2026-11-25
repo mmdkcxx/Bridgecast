@@ -10,7 +10,7 @@ export const INSTALL_LIBREOFFICE =
 export const WAYLAND_STILLS =
   "Animated slides need X11 on Linux, through Xwayland or an X11 session ('GNOME on Xorg'). Showing still slides."
 export const NO_POWERPOINT_ENGINE =
-  'PowerPoint files are converted to PDF on macOS with Keynote or LibreOffice. Install one of them, or export the file to PDF and import the PDF.'
+  'PowerPoint files are converted to PDF on macOS with Microsoft PowerPoint, Keynote or LibreOffice. Install one of them, or export the file to PDF and import the PDF.'
 
 export interface PlatformProbe {
   platform: NodeJS.Platform

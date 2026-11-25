@@ -449,7 +449,7 @@ export interface Api {
   listDecks(eventId: string): Promise<DeckMeta[]>
   importDecks(eventId: string, files: ImportRequest[]): Promise<void>
   addRendered(eventId: string, payload: RenderedDeck): Promise<DeckMeta>
-  /** macOS only: converts a PowerPoint file to PDF (Keynote, else LibreOffice). */
+  /** macOS only: converts a PowerPoint file to PDF (PowerPoint, else Keynote, else LibreOffice). */
   convertPptx(file: string): Promise<ConvertedPptx>
   reorderDecks(eventId: string, items: OrderItem[]): Promise<void>
   addSection(eventId: string, at: number | 'end'): Promise<{ event: EventMeta; sectionId: string }>

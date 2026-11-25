@@ -8,6 +8,10 @@ Versions restart at 0.x because the app is in development.
 
 - Settings > Clicker in the background: when turned on, a presentation clicker's PageDown and PageUp keep moving the live slide while another app is in front (for example while you reply to a message or prepare the next session's files). Off by default. "Clicker keys" chooses PageDown / PageUp (default) or the Right / Left arrows for clickers that send arrows, such as Perfect Cue. While it is on, the two chosen keys move slides from any keyboard on this PC and do not reach other apps. Not verified with a real clicker on Windows yet.
 
+### Changed
+
+- macOS: when Microsoft PowerPoint is installed, Bridgecast uses it first to turn an imported PowerPoint file into a PDF, so fonts and layout match what the speaker made. Keynote and then LibreOffice are still used when PowerPoint is missing or fails. The first import asks for permission to control PowerPoint (System Settings > Privacy & Security > Automation), and PowerPoint may ask once to grant access to a folder. It is still a Vector deck without animations. Not verified on a real Mac yet.
+
 ## [0.1.15] - 2026-11-24
 
 ### Fixed
