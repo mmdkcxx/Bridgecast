@@ -415,7 +415,9 @@ export class SlideShowManager {
     if (!e?.session || e.closing || !e.pos || !this.ready(deckId)) return
     const slides = this.decks().find((d) => d.id === deckId)?.slides ?? []
     const clicks = (i: number): number => slides[i]?.clicks ?? 0
-    const cur = e.pos
+    // The reducer clamps steps to SlideMeta clicks; an engine that runs more animations than the
+    // deck knows about (a deck imported without click counts) must not be pulled back to the clamp.
+    const cur = { index: e.pos.index, step: Math.min(e.pos.step, clicks(e.pos.index)) }
     const to = { index: shown.index, step: shown.step ?? 0 }
     if (cur.index === to.index && cur.step === to.step) {
       e.settling = false

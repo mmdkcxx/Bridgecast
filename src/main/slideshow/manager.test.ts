@@ -244,6 +244,24 @@ describe('SlideShowManager', () => {
     expect(app.state.shown?.index).toBe(2)
   })
 
+  it('an engine with more clicks than SlideMeta is never pulled back (deck imported without clicks)', async () => {
+    await goLive('a')
+    engine.setEngineClicks('a', [2, 3, 1]) // meta says 0 on slide 1
+    for (let i = 0; i < 3; i++) {
+      app.dispatch({ type: 'next' })
+      await flush()
+    }
+    expect(app.state.shown?.index).toBe(1) // PowerPoint is at the start of slide 1 (3 clicks)
+    engine.calls.length = 0
+    for (let i = 0; i < 4; i++) {
+      app.dispatch({ type: 'next' })
+      await flush()
+    }
+    expect(engine.calls.filter((c) => c.startsWith('next:')).length).toBe(4)
+    expect(engine.calls.some((c) => c.startsWith('prev:') || c.startsWith('goto:'))).toBe(false)
+    expect(app.state.shown?.index).toBe(2) // through all of slide 1's animations to slide 2
+  })
+
   it('navigation during a hang is abandoned and the engine is driven again after the restart', async () => {
     await goLive('a')
     engine.hang()
