@@ -1,0 +1,29 @@
+# Throwaway: builds the PowerPoint for Mac spike (spikes/mac-ppt) as a universal command-line tool.
+# Runs only on the spike branch; the result is a workflow artifact, never a release.
+name: macOS PowerPoint spike
+
+on:
+  push:
+    branches: [spike/mac-ppt-native]
+
+jobs:
+  spike:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        working-directory: spikes/mac-ppt
+        run: |
+          swiftc --version
+          swiftc -parse-as-library -O -target arm64-apple-macos13 Spike.swift -o ppt-spike-arm64
+          swiftc -parse-as-library -O -target x86_64-apple-macos13 Spike.swift -o ppt-spike-x64
+          lipo -create ppt-spike-arm64 ppt-spike-x64 -output ppt-spike
+          codesign --force --sign - ppt-spike
+          lipo -info ppt-spike
+          # tar keeps the executable bit, which an artifact zip drops.
+          tar -czf ppt-spike.tar.gz ppt-spike README.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ppt-spike-mac
+          path: spikes/mac-ppt/ppt-spike.tar.gz
+          retention-days: 14
