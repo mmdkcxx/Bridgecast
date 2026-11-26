@@ -179,7 +179,6 @@ final class Bridge {
       Out.fail(req.id, code: "nosession", message: "No slide show is open for this deck.")
       return
     }
-    keepVisible(s)
     if s.clicksKnown && s.counter.index == s.slideCount - 1 && s.counter.step >= s.counter.clicks {
       Out.fail(req.id, code: "ended", message: "The slide show is at its end.")
       return
@@ -215,7 +214,6 @@ final class Bridge {
       Out.fail(req.id, code: "nosession", message: "No slide show is open for this deck.")
       return
     }
-    keepVisible(s)
     do {
       try pp.previous(title: s.title)
       s.counter.onPrevEffect()
@@ -239,7 +237,6 @@ final class Bridge {
       Out.fail(req.id, code: "nosession", message: "No slide show is open for this deck.")
       return
     }
-    keepVisible(s)
     guard let index = req.args["index"] as? Int else {
       Out.fail(req.id, code: "args", message: "Missing or invalid arguments.")
       return
@@ -300,7 +297,7 @@ final class Bridge {
   /// Starts the position polling timer once.
   private func startTimer() {
     if timer != nil { return }
-    timer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
+    timer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { [weak self] _ in
       self?.poll()
     }
   }
@@ -316,7 +313,7 @@ final class Bridge {
         Out.event("error", ["deckId": s.deckId, "message": "The slide show closed."])
         closeSession(s.deckId, exitShow: false)
       }
-      if pollTicks % 20 == 0 && sessions[s.deckId] != nil {
+      if pollTicks % 5 == 0 && sessions[s.deckId] != nil {
         keepVisible(s)
       }
     }
