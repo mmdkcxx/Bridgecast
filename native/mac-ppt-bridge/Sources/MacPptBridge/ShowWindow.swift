@@ -4,9 +4,19 @@ import CoreGraphics
 import ScreenCaptureKit
 
 enum ShowWindow {
-  /// Screen recording allowed for this process.
+  private static var asked = false
+
+  /// Screen recording allowed; when not, asks once per process (the prompt adds the app to
+  /// System Settings > Privacy & Security > Screen & System Audio Recording; it applies after a reopen).
   static func recordingAllowed() -> Bool {
-    CGPreflightScreenCaptureAccess()
+    if CGPreflightScreenCaptureAccess() {
+      return true
+    }
+    if !asked {
+      asked = true
+      _ = CGRequestScreenCaptureAccess()
+    }
+    return false
   }
 
   /// Polls for a window owned by `pid` with an exact `title` match.
