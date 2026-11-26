@@ -10,7 +10,7 @@ Versions restart at 0.x because the app is in development.
 
 ### Changed
 
-- macOS: when Microsoft PowerPoint is installed, Bridgecast uses it first to turn an imported PowerPoint file into a PDF, so fonts and layout match what the speaker made. Keynote and then LibreOffice are still used when PowerPoint is missing or fails. The first import asks for permission to control PowerPoint (System Settings > Privacy & Security > Automation), and PowerPoint may ask once to grant access to a folder. It is still a Vector deck without animations. Not verified on a real Mac yet.
+- macOS: when Microsoft PowerPoint is installed, Bridgecast uses it first to turn an imported PowerPoint file into a PDF, so fonts and layout match what the speaker made. Keynote and then LibreOffice are still used when PowerPoint is missing or fails. The first import asks for permission to control PowerPoint (System Settings > Privacy & Security > Automation), and PowerPoint asks once to grant access to its working folder (Library/Application Support/bridgecast/PowerPoint export): choose Select…, then Grant Access. It is still a Vector deck without animations. Not verified on a real Mac yet.
 
 ## [0.1.15] - 2026-11-24
 

@@ -117,7 +117,7 @@ import { createElectronEngine } from './updater/electron-engine'
 import { createFakeEngine } from './updater/fake-engine'
 import { defaultPlayback, engineStates, playbackOf, type SlideshowStatus } from '../shared/playback'
 import { pdfSourceFields } from './import/pdf-source'
-import { convertPptxToPdf } from './import/mac-convert'
+import { convertPptxToPdf, macConvertDeps } from './import/mac-convert'
 import { isPageZoom, sanitizeWebUrl, webDomain, type WebCaptureWarning } from '../shared/web'
 import { WebHost } from './web/web-host'
 import { ElectronPageBackend } from './web/electron-page-backend'
@@ -708,7 +708,13 @@ function registerIpc(
     }
     const dir = tempDir()
     try {
-      const pdfPath = await convertPptxToPdf(file, dir)
+      // One fixed folder for PowerPoint, so its sandbox asks to grant access only once.
+      const pdfPath = await convertPptxToPdf(
+        file,
+        dir,
+        macConvertDeps,
+        join(app.getPath('userData'), 'PowerPoint export')
+      )
       const pdf = new Uint8Array(await fs.promises.readFile(pdfPath))
       converted.set(pdfPath, { dir, original: file })
       return { pdf, pdfPath }

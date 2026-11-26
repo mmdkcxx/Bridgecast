@@ -38,11 +38,28 @@ function deps(o: {
   failKeynote?: string
   failSoffice?: boolean
   noOutput?: boolean
-}): MacConvertDeps & { calls: string[] } {
+}): MacConvertDeps & { calls: string[]; argv: string[][]; removed: string[]; dirs: string[] } {
   const made = new Set<string>()
   const calls: string[] = []
+  const argv: string[][] = []
+  const removed: string[] = []
+  const dirs: string[] = []
   return {
     calls,
+    argv,
+    removed,
+    dirs,
+    mkdir: (p) => void dirs.push(p),
+    copy: (_from, to) => void made.add(to),
+    move: (from, to) => {
+      made.delete(from)
+      made.add(to)
+    },
+    remove: (p) => {
+      removed.push(p)
+      made.delete(p)
+    },
+    id: () => 'id1',
     exists: (p) =>
       (p === POWERPOINT_APP && !!o.powerpoint) ||
       (p === KEYNOTE_APP && !!o.keynote) ||
@@ -51,10 +68,12 @@ function deps(o: {
     run: async (cmd, args) => {
       const w = who(cmd, args)
       calls.push(w)
+      argv.push(args)
       if (w === 'powerpoint' && o.failPowerpoint) throw new Error(o.failPowerpoint)
       if (w === 'keynote' && o.failKeynote) throw new Error(o.failKeynote)
       if (cmd !== 'osascript' && o.failSoffice) throw new Error('soffice failed')
-      if (!o.noOutput) made.add(OUT)
+      // osascript writes argv[3]; soffice names its output after the input file.
+      if (!o.noOutput) made.add(cmd === 'osascript' ? args[3] : OUT)
     }
   }
 }
@@ -158,6 +177,41 @@ describe('convertPptxToPdf', () => {
       )
     ).rejects.toThrow(POWERPOINT_DENIED)
   })
+  describe('PowerPoint working folder', () => {
+    const DIR = path.join('/ud', 'PowerPoint export')
+    const goIn = (d: MacConvertDeps): Promise<string> =>
+      convertPptxToPdf('/in/Show.pptx', '/tmp/o', d, DIR)
+
+    it('copies the file into one fixed folder so PowerPoint asks for access only once', async () => {
+      const d = deps({ powerpoint: true })
+      expect(await goIn(d)).toBe(OUT)
+      expect(d.dirs).toEqual([DIR])
+      expect(d.argv[0].slice(2)).toEqual([path.join(DIR, 'id1.pptx'), path.join(DIR, 'id1.pdf')])
+      expect(d.removed).toContain(path.join(DIR, 'id1.pptx'))
+    })
+    it('uses the same folder on every import', async () => {
+      const a = deps({ powerpoint: true })
+      const b = deps({ powerpoint: true })
+      await goIn(a)
+      await goIn(b)
+      expect(path.dirname(a.argv[0][2])).toBe(path.dirname(b.argv[0][2]))
+    })
+    it('cleans up and gives Keynote the original file when PowerPoint fails', async () => {
+      const d = deps({ powerpoint: true, keynote: true, failPowerpoint: 'User canceled. (-128)' })
+      expect(await goIn(d)).toBe(OUT)
+      expect(d.calls).toEqual(['powerpoint', 'keynote'])
+      expect(d.argv[1].slice(2)).toEqual(['/in/Show.pptx', OUT])
+      expect(d.removed).toEqual(
+        expect.arrayContaining([path.join(DIR, 'id1.pptx'), path.join(DIR, 'id1.pdf')])
+      )
+    })
+    it('keeps a .ppt extension on the working copy', async () => {
+      const d = deps({ powerpoint: true })
+      await convertPptxToPdf('/in/Show.ppt', '/tmp/o', d, DIR)
+      expect(d.argv[0][2]).toBe(path.join(DIR, 'id1.ppt'))
+    })
+  })
+
   it('reports a plain failure, also when no PDF appears', async () => {
     await expect(go(deps({ keynote: true, failKeynote: 'other' }))).rejects.toThrow(CONVERT_FAILED)
     await expect(go(deps({ soffice: true, noOutput: true }))).rejects.toThrow(CONVERT_FAILED)

@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process'
 import * as fs from 'node:fs'
 import path from 'node:path'
+import { randomUUID } from 'node:crypto'
 
 export const NO_MAC_CONVERTER =
   'Install Microsoft PowerPoint, Keynote (free from the App Store) or LibreOffice to import PowerPoint files, or export the file to PDF and import the PDF.'
@@ -24,7 +25,8 @@ export const CONVERT_TIMEOUT_MS = 180_000
  * Microsoft PowerPoint exports the PDF itself, so fonts, layout and effects match what the speaker
  * made. Paths come in as argv, never spliced into the script. `save ... in` takes an HFS path
  * string. Only the presentation this script opened is closed, and PowerPoint quits only if it
- * was not running before. PowerPoint is sandboxed: it may ask once to grant access to the folder.
+ * was not running before. PowerPoint is sandboxed: it asks to grant access to a folder, so the
+ * caller passes one fixed working folder (see convertPptxToPdf) and the grant is asked only once.
  */
 export const POWERPOINT_SCRIPT = `on run argv
   set inFile to POSIX file (item 1 of argv)
@@ -95,6 +97,14 @@ export interface MacConvertDeps {
   exists(p: string): boolean
   /** Runs a program; rejects with its stderr as the message (also on timeout). */
   run(cmd: string, args: string[], timeoutMs: number): Promise<void>
+  mkdir(dir: string): void
+  copy(from: string, to: string): void
+  /** Moves a file; works across volumes. */
+  move(from: string, to: string): void
+  /** Removes a file if it exists; never throws. */
+  remove(file: string): void
+  /** A unique name for one import's working files. */
+  id(): string
 }
 
 export const macConvertDeps: MacConvertDeps = {
@@ -104,18 +114,42 @@ export const macConvertDeps: MacConvertDeps = {
       execFile(cmd, args, { timeout: timeoutMs, killSignal: 'SIGKILL' }, (err, _out, stderr) =>
         err ? reject(new Error(String(stderr || err.message))) : resolve()
       )
-    })
+    }),
+  mkdir: (dir) => void fs.mkdirSync(dir, { recursive: true }),
+  copy: (from, to) => fs.copyFileSync(from, to),
+  move: (from, to) => {
+    try {
+      fs.renameSync(from, to)
+    } catch {
+      fs.copyFileSync(from, to)
+      fs.rmSync(from, { force: true })
+    }
+  },
+  remove: (file) => {
+    try {
+      fs.rmSync(file, { force: true })
+    } catch {
+      // A leftover working file is harmless; the next import uses a new name.
+    }
+  },
+  id: () => randomUUID()
 }
 
 /**
  * Converts a PowerPoint file to `<outDir>/<name>.pdf` on macOS: Microsoft PowerPoint first, then
  * Keynote, then LibreOffice.
  * Resolves with the PDF path; throws an operator message when nothing could convert it.
+ *
+ * `powerpointDir`: one fixed folder PowerPoint works in. PowerPoint is sandboxed and asks the
+ * operator to grant access to every new folder; the import temp folder is new each time, so the
+ * file is copied into this folder and the PDF is written there, then moved to `outDir`. The grant
+ * is then asked once. Without it PowerPoint reads and writes the given paths directly.
  */
 export async function convertPptxToPdf(
   file: string,
   outDir: string,
-  deps: MacConvertDeps = macConvertDeps
+  deps: MacConvertDeps = macConvertDeps,
+  powerpointDir?: string
 ): Promise<string> {
   const pdf = path.join(outDir, `${path.basename(file).replace(/\.[^.]*$/, '')}.pdf`)
   const soffice = SOFFICE_PATHS.find((p) => deps.exists(p))
@@ -133,9 +167,27 @@ export async function convertPptxToPdf(
       return false
     }
   }
-  if (hasPowerpoint && (await attempt('osascript', powerpointArgs(file, pdf), POWERPOINT_DENIED))) {
-    return pdf
+  const viaPowerpoint = async (): Promise<boolean> => {
+    if (!powerpointDir) return attempt('osascript', powerpointArgs(file, pdf), POWERPOINT_DENIED)
+    const id = deps.id()
+    const work = path.join(powerpointDir, `${id}${path.extname(file)}`)
+    const workPdf = path.join(powerpointDir, `${id}.pdf`)
+    try {
+      deps.mkdir(powerpointDir)
+      deps.copy(file, work)
+      await deps.run('osascript', powerpointArgs(work, workPdf), CONVERT_TIMEOUT_MS)
+      if (!deps.exists(workPdf)) return false
+      deps.move(workPdf, pdf)
+      return deps.exists(pdf)
+    } catch (err) {
+      if (!denied && isAutomationDenied(err)) denied = POWERPOINT_DENIED
+      return false
+    } finally {
+      deps.remove(work)
+      deps.remove(workPdf)
+    }
   }
+  if (hasPowerpoint && (await viaPowerpoint())) return pdf
   if (hasKeynote && (await attempt('osascript', keynoteArgs(file, pdf), KEYNOTE_DENIED))) return pdf
   // soffice names its output after the input file, which is what `pdf` is.
   if (soffice && (await attempt(soffice, sofficeArgs(file, outDir)))) return pdf
