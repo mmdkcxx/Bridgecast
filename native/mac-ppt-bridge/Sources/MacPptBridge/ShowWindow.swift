@@ -1,10 +1,12 @@
 import Foundation
 import AppKit
 import CoreGraphics
+import ApplicationServices
 import ScreenCaptureKit
 
 enum ShowWindow {
   private static var asked = false
+  private static var askedAccessibility = false
 
   /// Screen recording allowed; when not, asks once per process (the prompt adds the app to
   /// System Settings > Privacy & Security > Screen & System Audio Recording; it applies after a reopen).
@@ -64,6 +66,66 @@ enum ShowWindow {
       return
     }
     _ = app.activate(options: [.activateAllWindows])
+  }
+
+  /// Brings the slide show window back when the operator minimized it or hid PowerPoint
+  /// (macOS stops drawing such windows, so the capture freezes). Returns true when it changed something.
+  static func restoreIfNeeded(pid: pid_t, title: String) -> Bool {
+    guard let app = NSRunningApplication(processIdentifier: pid) else { return false }
+    var changed = false
+    if app.isHidden {
+      _ = app.unhide()
+      changed = true
+      log("PowerPoint was hidden; unhid it")
+    }
+
+    guard let windows = CGWindowListCopyWindowInfo([.optionAll], kCGNullWindowID) as? [[String: Any]] else {
+      return changed
+    }
+    guard let info = windows.first(where: {
+      ($0[kCGWindowOwnerPID as String] as? Int) == Int(pid) &&
+      ($0[kCGWindowName as String] as? String) == title
+    }) else {
+      return changed
+    }
+    let onScreen = info[kCGWindowIsOnscreen as String] as? Bool ?? false
+    if onScreen {
+      return changed
+    }
+
+    if !AXIsProcessTrusted() {
+      if !askedAccessibility {
+        askedAccessibility = true
+        let opts = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+        _ = AXIsProcessTrustedWithOptions(opts)
+        log("Accessibility permission is needed to restore a minimized slide show window")
+      }
+      return changed
+    }
+
+    let axApp = AXUIElementCreateApplication(pid)
+    var value: CFTypeRef?
+    if AXUIElementCopyAttributeValue(axApp, kAXWindowsAttribute as CFString, &value) == .success,
+       let axWindows = value as? [AXUIElement] {
+      for win in axWindows {
+        var titleValue: CFTypeRef?
+        if AXUIElementCopyAttributeValue(win, kAXTitleAttribute as CFString, &titleValue) == .success,
+           let axTitle = titleValue as? String,
+           axTitle == title {
+          var minimizedValue: CFTypeRef?
+          if AXUIElementCopyAttributeValue(win, kAXMinimizedAttribute as CFString, &minimizedValue) == .success,
+             let minimized = minimizedValue as? Bool,
+             minimized {
+            if AXUIElementSetAttributeValue(win, kAXMinimizedAttribute as CFString, kCFBooleanFalse) == .success {
+              changed = true
+              log("Slide show window was minimized; restored it")
+            }
+          }
+        }
+      }
+    }
+
+    return changed
   }
 
   private static func log(_ message: String) {

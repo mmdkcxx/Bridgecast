@@ -32,6 +32,10 @@ import { SlideSound } from './slideshow/audio-pipe'
 import { LibreOfficeEngine, loBridgePath } from './slideshow/libreoffice-engine'
 import { PulseSink } from './slideshow/pulse-sink'
 import { slideshowSourceId } from './slideshow/capture'
+import { createDisplayMediaRoute, installDisplayMediaHandler } from './slideshow/display-media'
+
+/** Slide show windows a renderer is about to capture with getDisplayMedia (macOS). */
+const displayRoute = createDisplayMediaRoute()
 import { importPptx, configureImport, importEngine } from './import'
 import { importPptxPowerPoint } from './import/pptx'
 import { importPptxLibreOffice, installedFonts } from './import/libreoffice'
@@ -1363,7 +1367,10 @@ function registerSlideshowIpc(
     if (roleOf(e.sender) === 'prepare') throw new Error(NOT_APP_WINDOW)
     return slideshowSourceId(host.manager.windowId(deckId), (types) =>
       desktopCapturer.getSources({ types, thumbnailSize: { width: 0, height: 0 } })
-    )
+    ).then((id) => {
+      if (process.platform === 'darwin') displayRoute.remember(e.sender.id, id)
+      return id
+    })
   })
   appHandle(Invoke.slideshowCrop, (e, deckId) => {
     assertString(deckId, 'Deck ID')
@@ -1804,6 +1811,12 @@ app.whenReady().then(async () => {
   session.defaultSession.setPermissionRequestHandler((_wc, permission, callback, details) =>
     callback(permissionAllowed(permission, details.requestingUrl, devUrl))
   )
+  // macOS slide show capture uses getDisplayMedia so the mouse pointer stays out of the picture.
+  if (process.platform === 'darwin') {
+    installDisplayMediaHandler(session.defaultSession, displayRoute, (types) =>
+      desktopCapturer.getSources({ types, thumbnailSize: { width: 0, height: 0 } })
+    )
+  }
 
   const root = app.getPath('userData')
   // Which program plays PowerPoint files here: by platform only (PowerPoint, LibreOffice, none).

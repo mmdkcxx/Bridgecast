@@ -55,16 +55,16 @@ export function StreamLayer(props: StreamLayerProps): React.JSX.Element {
   })
   const [cap, setCap] = useState<StreamCapture | null>(null)
   const attached = useRef<MediaStream | null>(null)
-  const [crop, setCrop] = useState<CropRect | null>(null)
+  const [crop, setCrop] = useState<{ key: string; rect: CropRect | null } | null>(null)
 
-  const cropped = cropStyle(crop)
+  const cropKey = `${source}:${id}`
+  const cropped = cropStyle(crop && crop.key === cropKey ? crop.rect : null)
   const mediaStyle: React.CSSProperties | undefined = cropped
     ? { ...cropped, objectFit: 'fill' }
     : undefined
 
   useEffect(() => {
     let alive = true
-    setCrop(null)
     const p = (): StreamLayerProps => latest.current
     const c = new StreamCapture({
       open: async () => {
@@ -73,7 +73,7 @@ export function StreamLayer(props: StreamLayerProps): React.JSX.Element {
           window.api
             .slideshowCrop(id)
             .then((r) => {
-              if (alive) setCrop(r)
+              if (alive) setCrop({ key: `${source}:${id}`, rect: r })
             })
             .catch(() => {})
         }

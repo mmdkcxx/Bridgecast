@@ -37,6 +37,7 @@ final class Bridge {
   private var tap: SoundTap?
   private let socketPath = NSTemporaryDirectory() + "bridgecast-ppt-\(getpid()).sock"
   private var timer: Timer?
+  private var pollTicks = 0
 
   /// Creates the handler and watches for PowerPoint terminating.
   init(ping: PingPolicy) {
@@ -178,6 +179,7 @@ final class Bridge {
       Out.fail(req.id, code: "nosession", message: "No slide show is open for this deck.")
       return
     }
+    keepVisible(s)
     if s.clicksKnown && s.counter.index == s.slideCount - 1 && s.counter.step >= s.counter.clicks {
       Out.fail(req.id, code: "ended", message: "The slide show is at its end.")
       return
@@ -213,6 +215,7 @@ final class Bridge {
       Out.fail(req.id, code: "nosession", message: "No slide show is open for this deck.")
       return
     }
+    keepVisible(s)
     do {
       try pp.previous(title: s.title)
       s.counter.onPrevEffect()
@@ -236,6 +239,7 @@ final class Bridge {
       Out.fail(req.id, code: "nosession", message: "No slide show is open for this deck.")
       return
     }
+    keepVisible(s)
     guard let index = req.args["index"] as? Int else {
       Out.fail(req.id, code: "args", message: "Missing or invalid arguments.")
       return
@@ -284,6 +288,15 @@ final class Bridge {
     Out.event("position", ["deckId": s.deckId, "index": p.index, "step": p.step, "clicks": p.clicks])
   }
 
+  /// Keeps the session's slide show window drawable (not minimized, PowerPoint not hidden),
+  /// then gives the focus back to Bridgecast when something had to be restored.
+  private func keepVisible(_ s: Session) {
+    guard let pid = pp.pid else { return }
+    if ShowWindow.restoreIfNeeded(pid: pid, title: s.title) {
+      ShowWindow.activate(pid: getppid())
+    }
+  }
+
   /// Starts the position polling timer once.
   private func startTimer() {
     if timer != nil { return }
@@ -295,12 +308,16 @@ final class Bridge {
   /// Polls PowerPoint for the current slide of every session.
   private func poll() {
     ping.begin("poll")
+    pollTicks += 1
     for s in Array(sessions.values) {
       if let pos = try? pp.position(title: s.title) {
         sync(s, pos)
       } else if !pp.showExists(title: s.title) {
         Out.event("error", ["deckId": s.deckId, "message": "The slide show closed."])
         closeSession(s.deckId, exitShow: false)
+      }
+      if pollTicks % 20 == 0 && sessions[s.deckId] != nil {
+        keepVisible(s)
       }
     }
     ping.end()
