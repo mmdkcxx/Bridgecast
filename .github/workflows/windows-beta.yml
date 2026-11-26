@@ -39,7 +39,7 @@ jobs:
         run: dotnet build native/ppt-bridge/PptBridge.csproj -c Release --nologo
       - name: WebView2 page helper
         run: dotnet build native/web-bridge/WebBridge.csproj -c Release --nologo
-      - name: OMT libraries (not in the repo: OMT output is unavailable in this build)
+      - name: 'OMT libraries (not in the repo: OMT output is unavailable in this build)'
         run: New-Item -ItemType Directory -Force resources/omt/win | Out-Null
       # typecheck + bundle; `npm test` is not run here because some path tests assume POSIX
       # separators and fail on Windows.
