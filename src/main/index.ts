@@ -2050,7 +2050,8 @@ Location: ${root}`
       packaged: app.isPackaged,
       platform: process.platform,
       env: process.env,
-      packageType: readPackageType()
+      packageType: readPackageType(),
+      appName: app.getName()
     })
   const updateManager = updatesEnabled
     ? new UpdateManager({

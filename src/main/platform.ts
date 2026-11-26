@@ -164,15 +164,19 @@ export function childEnv(
  * `.deb` install. `packageType` is the text of `resources/package-type`, which electron-builder
  * writes into a `.deb` (`deb`); electron-updater picks its installer from the same file. A
  * `.deb` update is installed with `dpkg` and asks for the administrator password.
- * `BRIDGECAST_NO_UPDATE_CHECK=1` switches updates off.
+ * `BRIDGECAST_NO_UPDATE_CHECK=1` switches updates off. A Bridgecast Beta test build (its own app
+ * id and name) never updates itself: the releases are the regular app.
  */
 export function canSelfUpdate(o: {
   packaged: boolean
   platform: NodeJS.Platform
   env: Record<string, string | undefined>
   packageType: string | null
+  /** The app's name, `app.getName()`. */
+  appName?: string
 }): boolean {
   if (!o.packaged || o.env['BRIDGECAST_NO_UPDATE_CHECK'] === '1') return false
+  if (o.appName && /\bbeta\b/i.test(o.appName)) return false
   if (o.platform === 'win32') return true
   if (o.platform !== 'linux') return false
   return o.env['APPIMAGE'] !== undefined || o.packageType?.trim() === 'deb'
