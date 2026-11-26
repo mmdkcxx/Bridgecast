@@ -364,9 +364,27 @@ silently.
 - [ ] Permission denied (Don't Allow, or remove it in System Settings > Privacy & Security > Automation): with LibreOffice absent the row says to allow Bridgecast to control Keynote; with LibreOffice present the import still works through it.
 - [ ] LibreOffice only (no Keynote): import a .pptx and a .ppt; a Vector deck appears. Also with LibreOffice already open on a document.
 - [ ] None installed: the row says to install Microsoft PowerPoint, Keynote or LibreOffice, or export to PDF.
-- [ ] The deck's playback is Vector (never Native), the deck menu has no "Edit in PowerPoint", and `original.pptx` in the deck folder is the untouched imported file next to `source.pdf`.
+- [ ] Without PowerPoint (Keynote or LibreOffice converted it): the deck's playback is Vector (never Native), the deck menu has no "Edit in PowerPoint", and `original.pptx` in the deck folder is the untouched imported file next to `source.pdf`. With PowerPoint: see "Putar PPT asli di Mac".
 - [ ] A deck with a modal Keynote dialog (missing fonts) or a 200-slide file: the import fails with a message after about 3 minutes and Keynote is not left hanging.
 - [ ] Packaged build (hardened runtime): Apple events are not silently refused (the entitlement `com.apple.security.automation.apple-events` is present).
+
+## Putar PPT asli di Mac (PowerPoint for Mac, helper `mac-ppt-bridge`)
+
+**BELUM DIVERIFIKASI: perlu Mac dengan PowerPoint, macOS 13+.** Uji dengan aplikasi terpisah
+"Bridgecast Beta" (build GitHub Actions), bukan Bridgecast yang sedang dipakai.
+
+- [ ] Import .pptx dengan PowerPoint terpasang: deck berlabel Native, folder deck berisi `source.pptx`, `source.pdf`, `original.pptx` dan PNG.
+- [ ] Deck Native pertama: macOS meminta Screen & System Audio Recording. Sebelum diizinkan: chip Fallback, output menampilkan PNG slide, pesan "Allow Bridgecast in System Settings > Privacy & Security > Screen & System Audio Recording, then reopen Bridgecast." Izinkan Bridgecast Beta, buka ulang, deck jadi Native · Ready.
+- [ ] Animasi maju satu langkah per klik clicker (PageDown/PageUp dan panah kanan/kiri); prev mundur satu langkah.
+- [ ] Transisi antar slide terlihat di output.
+- [ ] Video di slide bergerak dan suaranya keluar di Local, OMT, dan Both; volume deck x master berlaku.
+- [ ] Notifikasi WhatsApp/macOS saat show tidak terdengar di output; suara Bridgecast sendiri tidak dobel.
+- [ ] Tidak ada title bar, pita hitam, atau bagian desktop di output, HDMI maupun monitor operator.
+- [ ] Klik terakhir di slide terakhir: output tetap di slide terakhir, tidak pernah layar "End of slide show".
+- [ ] Jendela slideshow PowerPoint tidak muncul di depan jendela operator dan keyboard tetap di Bridgecast setelah deck dibuka (kalau fokus pindah, catat; "Clicker in the background" tetap bekerja).
+- [ ] File PowerPoint milik operator yang sedang terbuka tetap terbuka setelah Bridgecast Beta ditutup; PowerPoint yang dibuka Bridgecast ditutup lagi hanya kalau tidak ada file lain.
+- [ ] Force Quit PowerPoint saat deck live: output menampilkan PNG slide yang sama (tidak hitam, tidak desktop), chip Fallback; setelah PowerPoint kembali, Resume mengembalikan Native.
+- [ ] Deck menu > Edit in PowerPoint: muncul pesan "Edit in PowerPoint is not available on Mac yet." dan show tidak terganggu.
 
 ## Selesai
 

@@ -23,6 +23,10 @@ export interface PlatformProbe {
   x11Capture?: boolean
   hasSoffice: boolean
   hasPyUno: boolean
+  /** macOS: Microsoft PowerPoint is installed in /Applications. */
+  hasPowerPoint?: boolean
+  /** macOS major version (13 = Ventura). */
+  macosMajor?: number
 }
 
 export interface EngineInfo {
@@ -37,9 +41,10 @@ export interface EngineInfo {
 }
 
 /**
- * Engine choice is by platform only (no setting): Windows uses PowerPoint; Linux uses LibreOffice
- * Impress when `soffice` and python3-uno are there. Under Wayland native decks play through
- * Xwayland (`x11Capture`), and as stills when the app could not get there.
+ * Engine choice is by platform only (no setting): Windows uses PowerPoint; macOS uses PowerPoint
+ * for Mac (mac-ppt-bridge) on macOS 13+ when it is installed; Linux uses LibreOffice Impress when
+ * `soffice` and python3-uno are there. Under Wayland native decks play through Xwayland
+ * (`x11Capture`), and as stills when the app could not get there.
  */
 export function detectEngine(p: PlatformProbe): EngineInfo {
   if (p.platform === 'win32') return { engine: 'powerpoint', canCapture: true }
@@ -52,7 +57,16 @@ export function detectEngine(p: PlatformProbe): EngineInfo {
     }
     return { engine: 'libreoffice', canCapture: true }
   }
+  if (p.platform === 'darwin' && p.hasPowerPoint && (p.macosMajor ?? 0) >= 13) {
+    return { engine: 'powerpoint', canCapture: true }
+  }
   return { engine: 'none', canCapture: false, message: NO_POWERPOINT_ENGINE }
+}
+
+/** macOS major version from the Darwin kernel release (`os.release()`: Darwin 22 = macOS 13); 0 when unreadable. */
+export function macosMajorFromDarwin(release: string): number {
+  const darwin = Number.parseInt(release.split('.')[0] ?? '', 10)
+  return Number.isFinite(darwin) && darwin >= 20 ? darwin - 9 : 0
 }
 
 function run(cmd: string, args: string[]): Promise<boolean> {

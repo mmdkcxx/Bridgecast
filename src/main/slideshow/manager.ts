@@ -1,4 +1,5 @@
 import type { Canvas } from '../../shared/canvas'
+import type { CropRect } from '../../shared/crop'
 import { playbackOf } from '../../shared/playback'
 import type { ProgramState } from '../../shared/program'
 import type { DeckMeta } from '../../shared/types'
@@ -128,6 +129,12 @@ export class SlideShowManager {
   windowId(deckId: string): string | null {
     const e = this.entries.get(deckId)
     return e?.session && !e.closing ? e.session.windowId : null
+  }
+
+  /** The slide's part of the captured window (macOS), null = the whole window. */
+  crop(deckId: string): CropRect | null {
+    const e = this.entries.get(deckId)
+    return e?.session && !e.closing ? (e.session.crop ?? null) : null
   }
 
   /** Opens the deck's working copy for editing in a normal window. */

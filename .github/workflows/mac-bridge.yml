@@ -1,0 +1,19 @@
+# Quick check of the PowerPoint for Mac helper on every push to its feature branch:
+# Swift unit tests and the universal release build (no app packaging).
+name: mac-ppt-bridge
+
+on:
+  push:
+    branches: [feat/mac-native-slideshow]
+    paths:
+      - native/mac-ppt-bridge/**
+      - scripts/build-mac-ppt-bridge.sh
+      - .github/workflows/mac-bridge.yml
+
+jobs:
+  bridge:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift --version
+      - run: bash scripts/build-mac-ppt-bridge.sh

@@ -54,6 +54,12 @@ mac:
   # "damaged" on Apple silicon; ad-hoc gets the normal "cannot verify" prompt instead.
   identity: '-'
   entitlementsInherit: build/entitlements.mac.plist
+  extraResources:
+    # PowerPoint for Mac slide show helper; built in CI: scripts/build-mac-ppt-bridge.sh
+    - from: native/mac-ppt-bridge/dist
+      to: mac-ppt-bridge
+      filter:
+        - mac-ppt-bridge
   extendInfo:
     - NSCameraUsageDescription: Application requests access to the device's camera.
     - NSMicrophoneUsageDescription: Application requests access to the device's microphone.

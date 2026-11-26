@@ -7,6 +7,7 @@ Versions restart at 0.x because the app is in development.
 ### Added
 
 - Settings > Clicker in the background: when turned on, a presentation clicker's PageDown and PageUp keep moving the live slide while another app is in front (for example while you reply to a message or prepare the next session's files). Off by default. "Clicker keys" chooses PageDown / PageUp (default) or the Right / Left arrows for clickers that send arrows, such as Perfect Cue. While it is on, the two chosen keys move slides from any keyboard on this PC and do not reach other apps. Not verified with a real clicker on Windows yet.
+- macOS: PowerPoint decks can play Native, like on Windows. With Microsoft PowerPoint installed (macOS 13 or later), an imported PowerPoint file plays as the real PowerPoint slide show in a window that is captured into every output, so animations step per clicker click, transitions play, and video inside slides moves with its sound. Only PowerPoint's sound is taken, never notifications or other apps. The first Native deck asks for Screen & System Audio Recording (System Settings > Privacy & Security); allow Bridgecast, then reopen it. Until then, and whenever PowerPoint fails, the output shows the slide's still image. Edit in PowerPoint is not available on Mac yet. Not verified on a real Mac yet.
 
 ### Changed
 

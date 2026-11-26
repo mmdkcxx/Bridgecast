@@ -15,6 +15,7 @@ import type { NewEventOptions } from './event-outputs'
 import type { DeckAudio } from './audio-levels'
 import type { SlideshowStatus } from './playback'
 import type { UpdateStatus } from './update'
+import type { CropRect } from './crop'
 import type {
   PrepareInput,
   WebCaptureSource,
@@ -93,6 +94,7 @@ export const Invoke = {
   webCaptureFailed: 'web:captureFailed',
   webCaptureWarnings: 'web:captureWarnings',
   slideshowSourceId: 'slideshow:sourceId',
+  slideshowCrop: 'slideshow:crop',
   slideshowNote: 'slideshow:note',
   slideshowStatus: 'slideshow:status',
   deckEdit: 'deck:edit',
@@ -358,6 +360,8 @@ export interface InvokeMap {
    * show window (the caller then shows the slide's PNG). Never a screen.
    */
   'slideshow:sourceId': { args: [deckId: string]; result: string }
+  /** Slide's part of the deck's slide show window, as fractions of the window; null = whole window. */
+  'slideshow:crop': { args: [deckId: string]; result: CropRect | null }
   /** The calling window received the first captured frame of the deck's slide show. */
   'slideshow:frame': { args: [deckId: string]; result: void }
   /** Why the app cannot control PowerPoint's sound (operator copy), or null. */
@@ -553,6 +557,8 @@ export interface Api {
   onWebCaptureWarnings(cb: (w: WebCaptureWarning[]) => void): () => void
   /** Capture id of a native deck's slide show window (see `slideshow:sourceId`). */
   slideshowSourceId(deckId: string): Promise<string>
+  /** Crop of a native deck's capture (see `slideshow:crop`). */
+  slideshowCrop(deckId: string): Promise<CropRect | null>
   /** Ready gate: report the first frame of a slide show's capture. */
   /**
    * HDMI or OMT output window: asks main for a MessagePort with PowerPoint's sound; the

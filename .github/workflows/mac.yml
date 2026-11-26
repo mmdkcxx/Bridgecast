@@ -1,10 +1,12 @@
-# Builds the unsigned macOS disks (Intel and Apple silicon) and attaches them to the GitHub
-# release. Runs when a release is published, or by hand for an existing tag.
+# Builds the unsigned macOS disks (Intel and Apple silicon).
+# - Release: runs when a release is published, or by hand with a tag; attaches the disks to it.
+# - Test build: a push to test/mac-build (or a run without a tag) packages "Bridgecast Beta"
+#   (own app id, name and data folder, so it never replaces an installed Bridgecast) and keeps
+#   the disks as a workflow artifact.
 # macOS builds do not self-update and are not notarized: Gatekeeper blocks the first open.
 name: macOS build
 
 on:
-  # Test builds: a push to this branch builds the disks and keeps them as a workflow artifact.
   push:
     branches: [test/mac-build]
   release:
@@ -12,7 +14,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Release tag to build and attach to (for example v0.1.14). Empty = test build, kept as a workflow artifact
+        description: Release tag to build and attach to (for example v0.1.14). Empty = Bridgecast Beta test build
         required: false
       ref:
         description: Commit or branch to build from (defaults to the tag)
@@ -35,21 +37,33 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm test
+      - name: PowerPoint for Mac helper
+        run: bash scripts/build-mac-ppt-bridge.sh
       - run: npm run build
-      - name: Package
+      - name: Package (release)
+        if: env.TAG != ''
         # Ad-hoc signed (mac.identity '-' in electron-builder.yml): no Apple certificate yet.
         run: npx electron-builder --mac dmg --x64 --arm64 --publish never
+      - name: Package (Bridgecast Beta)
+        if: env.TAG == ''
+        run: >-
+          npx electron-builder --mac dmg --x64 --arm64 --publish never
+          -c.appId=com.bridgecast.app.beta
+          -c.productName="Bridgecast Beta"
+          -c.extraMetadata.name=bridgecast-beta
       - name: Verify the signature
         run: |
-          for app in dist/mac*/Bridgecast.app; do
+          for app in dist/mac*/*.app; do
             codesign --verify --deep --strict --verbose=2 "$app"
             codesign -dv "$app" 2>&1 | grep -E 'Signature|flags'
+            ls "$app/Contents/Resources/mac-ppt-bridge"
           done
       - name: Keep the test build as a workflow artifact
         if: env.TAG == ''
         uses: actions/upload-artifact@v4
         with:
-          name: bridgecast-mac-dmg
+          name: bridgecast-beta-mac-dmg
           path: dist/*.dmg
           retention-days: 14
       - name: Attach to the release
