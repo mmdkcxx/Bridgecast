@@ -57,34 +57,28 @@ export function StreamLayer(props: StreamLayerProps): React.JSX.Element {
   const attached = useRef<MediaStream | null>(null)
   const [crop, setCrop] = useState<CropRect | null>(null)
 
-  useEffect(() => {
-    if (source !== 'desktop') {
-      setCrop(null)
-      return
-    }
-    let live = true
-    window.api
-      .slideshowCrop(id)
-      .then((r) => {
-        if (live) setCrop(r)
-      })
-      .catch(() => {
-        if (live) setCrop(null)
-      })
-    return () => {
-      live = false
-    }
-  }, [source, id, generation])
-
   const cropped = cropStyle(crop)
   const mediaStyle: React.CSSProperties | undefined = cropped
     ? { ...cropped, objectFit: 'fill' }
     : undefined
 
   useEffect(() => {
+    let alive = true
+    setCrop(null)
     const p = (): StreamLayerProps => latest.current
     const c = new StreamCapture({
-      open: () => openStream(source, id, p().canvas, p().fps, !!p().audio),
+      open: async () => {
+        const stream = await openStream(source, id, p().canvas, p().fps, !!p().audio)
+        if (stream && source === 'desktop') {
+          window.api
+            .slideshowCrop(id)
+            .then((r) => {
+              if (alive) setCrop(r)
+            })
+            .catch(() => {})
+        }
+        return stream
+      },
       paused: () => p().paused,
       sound: (stream) => {
         const a = p().audio
@@ -109,6 +103,7 @@ export function StreamLayer(props: StreamLayerProps): React.JSX.Element {
     setCap(c)
     c.start()
     return () => {
+      alive = false
       c.dispose()
       if (attached.current) latest.current.audio?.detachStream(attached.current)
       attached.current = null
