@@ -1,4 +1,5 @@
 import type { Canvas } from '../../shared/canvas'
+import type { CropRect } from '../../shared/crop'
 
 /** Where the slideshow is: slide index, animation step inside it, and the slide's click count. */
 export interface EnginePosition {
@@ -17,6 +18,8 @@ export interface EngineError {
 export interface EngineSession {
   deckId: string
   windowId: string
+  /** macOS: the slide inside the captured window (the capture includes the title bar); absent = whole window. */
+  crop?: CropRect
   next(): Promise<void>
   prev(): Promise<void>
   goto(index: number): Promise<void>

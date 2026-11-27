@@ -4,6 +4,14 @@ Versions restart at 0.x because the app is in development.
 
 ## [Unreleased]
 
+### Added
+
+- macOS: PowerPoint decks can play Native, like on Windows. With Microsoft PowerPoint installed (macOS 13 or later), an imported PowerPoint file plays as the real PowerPoint slide show in a window that is captured into every output, so animations step per clicker click, transitions play, and video inside slides moves with its sound. Only PowerPoint's sound is taken, never notifications or other apps. The first Native deck asks for Screen & System Audio Recording (System Settings > Privacy & Security); allow Bridgecast, then reopen it. Until then, and whenever PowerPoint fails, the output shows the slide's still image. Edit in PowerPoint is not available on Mac yet. Not verified on a real Mac yet.
+
+### Changed
+
+- macOS: when Microsoft PowerPoint is installed, Bridgecast uses it first to turn an imported PowerPoint file into a PDF, so fonts and layout match what the speaker made. Keynote and then LibreOffice are still used when PowerPoint is missing or fails. The first import asks for permission to control PowerPoint (System Settings > Privacy & Security > Automation), and PowerPoint asks once to grant access to its working folder (Library/Application Support/bridgecast/PowerPoint export): choose Select…, then Grant Access. It is still a Vector deck without animations. Not verified on a real Mac yet.
+
 ## [0.1.15] - 2026-11-24
 
 ### Fixed

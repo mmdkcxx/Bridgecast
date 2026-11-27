@@ -28,6 +28,11 @@ export function configureImport(e: ImportEnv): void {
   env = e
 }
 
+/** The engine configured at start ('none' before configureImport). */
+export function importEngine(): EngineInfo['engine'] {
+  return env?.engine.engine ?? 'none'
+}
+
 interface ImportOptions {
   /** Test seam: the environment to use instead of the configured one. */
   env?: ImportEnv

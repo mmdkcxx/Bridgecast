@@ -3,11 +3,16 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { StringDecoder } from 'node:string_decoder'
 import type { Canvas } from '../../shared/canvas'
+import { isCropRect } from '../../shared/crop'
 import { BridgeClient, BridgeError, type BridgeEvent } from './bridge-protocol'
 import type { EngineError, EnginePosition, EngineSession, SlideShowEngine } from './engine'
 
 export const HELPER_START_FAILED =
   'The slide show helper could not start. Reinstall Bridgecast. Showing still slides.'
+
+/** macOS refused the window and sound capture (Screen & System Audio Recording). */
+export const SCREEN_RECORDING_NEEDED =
+  'Allow Bridgecast in System Settings > Privacy & Security > Screen & System Audio Recording, then reopen Bridgecast. Showing still slides.'
 
 /** The part of a child process the engine uses (a fake in tests). */
 export interface BridgeChild {
@@ -36,12 +41,21 @@ const defaultRestoreAudio = (exe: string): Promise<void> =>
     }
   })
 
-/** Where ppt-bridge.exe is: `resources/ppt-bridge/` packaged, the build output in dev. */
+/**
+ * Where the helper is: `resources/ppt-bridge/ppt-bridge.exe` packaged and the build output in dev
+ * on Windows, `mac-ppt-bridge` on macOS.
+ */
 export function bridgeExePath(opts: {
+  platform?: NodeJS.Platform
   packaged: boolean
   resourcesPath: string
   appPath: string
 }): string {
+  if ((opts.platform ?? 'win32') === 'darwin') {
+    return opts.packaged
+      ? path.join(opts.resourcesPath, 'mac-ppt-bridge', 'mac-ppt-bridge')
+      : path.join(opts.appPath, 'native', 'mac-ppt-bridge', 'dist', 'mac-ppt-bridge')
+  }
   return opts.packaged
     ? path.join(opts.resourcesPath, 'ppt-bridge', 'ppt-bridge.exe')
     : path.join(opts.appPath, 'native', 'ppt-bridge', 'bin', 'Release', 'net48', 'ppt-bridge.exe')
@@ -53,6 +67,8 @@ interface PowerPointEngineOptions {
   exists?: (file: string) => boolean
   /** Screen DPI (96 = 100 %) used to turn Canvas pixels into points. */
   dpi?: () => number
+  /** macOS: folder the helper copies each deck into before PowerPoint opens it (PowerPoint's sandbox asks once per folder). */
+  workDir?: string
   /** Called when the helper cannot start. */
   onStartFailure?: (message: string) => void
   /** Runs the one-shot `--restore-audio` of the helper (at engine start, after an abnormal exit). */
@@ -127,7 +143,7 @@ export class PowerPointEngine implements SlideShowEngine {
   private start(): Live {
     if (this.live && !this.live.exited) return this.live
     const exists = this.opts.exists ?? fs.existsSync
-    if (!exists(this.opts.exe)) this.failStart(`ppt-bridge.exe not found at ${this.opts.exe}`)
+    if (!exists(this.opts.exe)) this.failStart(`slide show helper not found at ${this.opts.exe}`)
     if (!this.restoredAtStart) {
       this.restoredAtStart = true
       this.runRestoreAudio()
@@ -244,20 +260,30 @@ export class PowerPointEngine implements SlideShowEngine {
 
   async open(deckId: string, file: string, canvas: Canvas): Promise<EngineSession> {
     const live = this.start()
-    const res = await live.client.request(
-      'open',
-      {
-        deckId,
-        file,
-        width: canvas.width,
-        height: canvas.height,
-        dpi: this.opts.dpi?.() ?? 96,
-        x: 0,
-        y: 0,
-        behind: true
-      },
-      OPEN_MS
-    )
+    let res: Record<string, unknown>
+    try {
+      res = await live.client.request(
+        'open',
+        {
+          deckId,
+          file,
+          width: canvas.width,
+          height: canvas.height,
+          dpi: this.opts.dpi?.() ?? 96,
+          x: 0,
+          y: 0,
+          behind: true,
+          ...(this.opts.workDir ? { workDir: this.opts.workDir } : {})
+        },
+        OPEN_MS
+      )
+    } catch (e) {
+      if (e instanceof BridgeError && e.code === 'screenrecording') {
+        this.startError = SCREEN_RECORDING_NEEDED
+        this.opts.onStartFailure?.(SCREEN_RECORDING_NEEDED)
+      }
+      throw e
+    }
     const windowId = res.windowId
     if (typeof windowId !== 'string' || !windowId) {
       throw new BridgeError('protocol', 'The slide show helper did not return a window.')
@@ -280,6 +306,7 @@ export class PowerPointEngine implements SlideShowEngine {
     return {
       deckId,
       windowId,
+      ...(isCropRect(res.crop) ? { crop: res.crop } : {}),
       next: () => call('next', {}),
       prev: () => call('prev', {}),
       goto: (index) => call('goto', { index }),

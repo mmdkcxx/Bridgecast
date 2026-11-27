@@ -1,15 +1,19 @@
 import type { Canvas } from '../../shared/canvas'
+import type { CropRect } from '../../shared/crop'
 import { playbackOf } from '../../shared/playback'
 import type { ProgramState } from '../../shared/program'
 import type { DeckMeta } from '../../shared/types'
 import type { AppState } from '../state'
 import type { EngineSession, SlideShowEngine } from './engine'
+import { stepOnce, walkSteps } from './walk'
 
 const HEARTBEAT_MS = 1000
 const HANG_MS = 3000
 const RETRY_MS = 3000
 /** Live deck + the next native deck. */
 const MAX_SESSIONS = 2
+/** Farther than this in show order, the engine jumps (goto) instead of stepping. */
+const MAX_WALK = 8
 
 interface ManagerTimers {
   setInterval: (fn: () => void, ms: number) => unknown
@@ -128,6 +132,12 @@ export class SlideShowManager {
   windowId(deckId: string): string | null {
     const e = this.entries.get(deckId)
     return e?.session && !e.closing ? e.session.windowId : null
+  }
+
+  /** The slide's part of the captured window (macOS), null = the whole window. */
+  crop(deckId: string): CropRect | null {
+    const e = this.entries.get(deckId)
+    return e?.session && !e.closing ? (e.session.crop ?? null) : null
   }
 
   /** Opens the deck's working copy for editing in a normal window. */
@@ -397,7 +407,7 @@ export class SlideShowManager {
       .catch(() => {})
   }
 
-  private async driveNow(deckId: string, gen: number): Promise<void> {
+  private async driveNow(deckId: string, gen: number, walked = false): Promise<void> {
     const s = this.state.state
     const shown = s.shown
     const e = this.entries.get(deckId)
@@ -405,7 +415,9 @@ export class SlideShowManager {
     if (!e?.session || e.closing || !e.pos || !this.ready(deckId)) return
     const slides = this.decks().find((d) => d.id === deckId)?.slides ?? []
     const clicks = (i: number): number => slides[i]?.clicks ?? 0
-    const cur = e.pos
+    // The reducer clamps steps to SlideMeta clicks; an engine that runs more animations than the
+    // deck knows about (a deck imported without click counts) must not be pulled back to the clamp.
+    const cur = { index: e.pos.index, step: Math.min(e.pos.step, clicks(e.pos.index)) }
     const to = { index: shown.index, step: shown.step ?? 0 }
     if (cur.index === to.index && cur.step === to.step) {
       e.settling = false
@@ -414,15 +426,52 @@ export class SlideShowManager {
     const session = e.session
     // Every engine call is bounded; a hung one is left to the heartbeat and abandoned.
     const call = (p: Promise<void>): Promise<void> => this.withTimeout(p)
-    if (cur.index === to.index && to.step === cur.step + 1) return call(session.next())
-    if (cur.index === to.index && to.step === cur.step - 1) return call(session.prev())
-    if (to.index > cur.index && to.step === 0 && cur.step >= clicks(cur.index)) {
-      const between = slides.slice(cur.index + 1, to.index)
-      if (between.every((x) => x.hidden)) return call(session.next())
+    const walkSlides = slides.map((x, i) => ({ clicks: clicks(i), hidden: !!x.hidden }))
+    // Next/prev pressed faster than PowerPoint follows: step there one move at a time instead
+    // of jumping (a jump rebuilds the slide's animations). Only along the operator's own
+    // presses: within the slide, or ending on a built step; a jump to the start of another
+    // slide (thumbnail, deck navigation) still uses goto, unless it is a single move.
+    const walkable = (
+      from: { index: number; step: number },
+      want: { index: number; step: number }
+    ): number | null => {
+      const n = walkSteps(walkSlides, from, want, MAX_WALK)
+      if (n === null || n === 0) return n
+      return from.index === want.index || want.step > 0 || Math.abs(n) === 1 ? n : null
     }
-    if (to.index < cur.index && cur.step === 0 && to.step === clicks(to.index)) {
-      const between = slides.slice(to.index + 1, cur.index)
-      if (between.every((x) => x.hidden)) return call(session.prev())
+    if (!walked && walkable(cur, to) !== null) {
+      // Hold the engine's in-between positions back while walking (each would replace the
+      // operator's newer target); the engine position is reported once the walk ends.
+      e.settling = true
+      let jump = false
+      try {
+        // Our own count of where the engine is, so a position event arriving after the reply
+        // never makes us move twice.
+        let at: { index: number; step: number } | null = { index: cur.index, step: cur.step }
+        for (let guard = 0; guard < MAX_WALK * 2 && at; guard++) {
+          if (gen !== this.gen) return
+          const live = this.state.state.shown
+          if (!live || live.deckId !== deckId || live.playback !== 'native') return
+          if (!e.session || e.closing || !this.ready(deckId)) return
+          const n = walkable(at, { index: live.index, step: live.step ?? 0 })
+          if (n === null) {
+            jump = true
+            break
+          }
+          if (n === 0) return
+          const dir = n > 0 ? 1 : -1
+          await call(dir > 0 ? e.session.next() : e.session.prev())
+          at = stepOnce(walkSlides, at, dir)
+        }
+      } finally {
+        if (!jump && this.entries.get(deckId) === e) {
+          e.settling = false
+          if (e.pos) this.onPosition(deckId, e.pos.index, e.pos.step) // the engine position wins once settled
+        }
+      }
+      // The target left the operator's path (a jump): goto below, still settling.
+      if (jump) return this.driveNow(deckId, gen, true)
+      return
     }
     await call(session.goto(to.index))
     // Build the slide up to the wanted step; the engine position still wins afterwards.

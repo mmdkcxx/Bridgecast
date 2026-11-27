@@ -129,6 +129,7 @@ const api: Api = {
   webCaptureWarnings: () => invoke(Invoke.webCaptureWarnings),
   onWebCaptureWarnings: (cb) => subscribe(Broadcast.webCaptureWarnings, cb),
   slideshowSourceId: (deckId) => invoke(Invoke.slideshowSourceId, deckId),
+  slideshowCrop: (deckId) => invoke(Invoke.slideshowCrop, deckId),
   requestSlideshowAudioPort: () => ipcRenderer.send(Send.slideshowAudioPortRequest),
   slideshowNote: () => invoke(Invoke.slideshowNote),
   onSlideshowNote: (cb) => subscribe(Broadcast.slideshowNote, cb),

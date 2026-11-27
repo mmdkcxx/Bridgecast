@@ -30,3 +30,6 @@ __pycache__/
 
 # Local scratch from the Linux web-helper debugging (not shipped)
 e2e/_tmp-src.mjs
+
+# mac-ppt-bridge build output
+native/mac-ppt-bridge/.build/

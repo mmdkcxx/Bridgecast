@@ -31,11 +31,17 @@ import { SlideSound } from './slideshow/audio-pipe'
 import { LibreOfficeEngine, loBridgePath } from './slideshow/libreoffice-engine'
 import { PulseSink } from './slideshow/pulse-sink'
 import { slideshowSourceId } from './slideshow/capture'
-import { importPptx, configureImport } from './import'
+import { createDisplayMediaRoute, installDisplayMediaHandler } from './slideshow/display-media'
+
+/** Slide show windows a renderer is about to capture with getDisplayMedia (macOS). */
+const displayRoute = createDisplayMediaRoute()
+import { importPptx, configureImport, importEngine } from './import'
 import { importPptxPowerPoint } from './import/pptx'
+import { pptxClicks, unzipPart } from './import/pptx-clicks'
 import { importPptxLibreOffice, installedFonts } from './import/libreoffice'
 import {
   detectEngine,
+  macosMajorFromDarwin,
   needsX11Relaunch,
   probeLinux,
   x11CaptureEnv,
@@ -113,8 +119,8 @@ import { UpdateManager } from './updater/manager'
 import { createElectronEngine } from './updater/electron-engine'
 import { createFakeEngine } from './updater/fake-engine'
 import { defaultPlayback, engineStates, playbackOf, type SlideshowStatus } from '../shared/playback'
-import { pdfSourceFields } from './import/pdf-source'
-import { convertPptxToPdf } from './import/mac-convert'
+import { renderedDeckFields } from './import/rendered-fields'
+import { convertPptxToPdf, macConvertDeps } from './import/mac-convert'
 import { isPageZoom, sanitizeWebUrl, webDomain, type WebCaptureWarning } from '../shared/web'
 import { WebHost } from './web/web-host'
 import { ElectronPageBackend } from './web/electron-page-backend'
@@ -694,7 +700,7 @@ function registerIpc(
     }
   })
 
-  // macOS: PowerPoint files become a PDF in main (Keynote, else LibreOffice); the renderer draws
+  // macOS: PowerPoint files become a PDF in main (PowerPoint, else Keynote, else LibreOffice); the renderer draws
   // the pages. The temp PDF is remembered here with the PowerPoint file it came from, so
   // addRendered can keep that file as original.* (a renderer path is never trusted for it).
   const converted = new Map<string, { dir: string; original: string }>()
@@ -705,7 +711,13 @@ function registerIpc(
     }
     const dir = tempDir()
     try {
-      const pdfPath = await convertPptxToPdf(file, dir)
+      // One fixed folder for PowerPoint, so its sandbox asks to grant access only once.
+      const pdfPath = await convertPptxToPdf(
+        file,
+        dir,
+        macConvertDeps,
+        join(app.getPath('userData'), 'PowerPoint export')
+      )
       const pdf = new Uint8Array(await fs.promises.readFile(pdfPath))
       converted.set(pdfPath, { dir, original: file })
       return { pdf, pdfPath }
@@ -740,14 +752,28 @@ function registerIpc(
           return { pngPath, notes: String(payload.notes?.[i] ?? '') }
         })
       )
+      // macOS with PowerPoint for Mac: a converted PowerPoint file plays native (source.pptx + source.pdf).
+      const fields = renderedDeckFields({
+        source,
+        sourcePath: payload.sourcePath,
+        original: conv?.original,
+        engine: importEngine()
+      })
+      // The PDF pages carry no animation steps; a native deck reads them from the PowerPoint file
+      // (without them Bridgecast takes PowerPoint's animations for an overshoot).
+      const counts =
+        fields.playback === 'native' && conv && /\.pptx$/i.test(conv.original)
+          ? await pptxClicks(conv.original, unzipPart)
+          : null
       const deck = lib.addDeck(eventId, {
         name: String(payload.name),
-        source,
         width: Number(payload.width),
         height: Number(payload.height),
-        slides,
-        ...(source === 'pdf' ? pdfSourceFields(payload.sourcePath) : {}),
-        ...(conv ? { originalPath: conv.original } : {})
+        slides:
+          counts && counts.length === slides.length
+            ? slides.map((s, i) => ({ ...s, clicks: counts[i] }))
+            : slides,
+        ...fields
       })
       state.refresh()
       return deck
@@ -1349,7 +1375,16 @@ function registerSlideshowIpc(
     if (roleOf(e.sender) === 'prepare') throw new Error(NOT_APP_WINDOW)
     return slideshowSourceId(host.manager.windowId(deckId), (types) =>
       desktopCapturer.getSources({ types, thumbnailSize: { width: 0, height: 0 } })
-    )
+    ).then((id) => {
+      if (process.platform === 'darwin') displayRoute.remember(e.sender.id, id)
+      return id
+    })
+  })
+  appHandle(Invoke.slideshowCrop, (e, deckId) => {
+    assertString(deckId, 'Deck ID')
+    // Prepare windows never show a slide show; the operator and outputs do.
+    if (roleOf(e.sender) === 'prepare') throw new Error(NOT_APP_WINDOW)
+    return host.manager.crop(deckId)
   })
   appHandle(Invoke.slideshowNote, () => slideNote)
   appHandle(Invoke.slideshowStatus, () => host.status())
@@ -1524,11 +1559,14 @@ function createSlideShow(
         })
       : new PowerPointEngine({
           exe: bridgeExePath({
+            platform: process.platform,
             packaged: app.isPackaged,
             resourcesPath: process.resourcesPath,
             appPath: app.getAppPath()
           }),
           dpi: () => screen.getPrimaryDisplay().scaleFactor * 96,
+          // macOS: PowerPoint opens decks from the folder it already has access to (import folder)
+          workDir: join(app.getPath('userData'), 'PowerPoint export'),
           onStartFailure: (message) => {
             helperError = message
             console.error('[slideshow]', message)
@@ -1773,6 +1811,12 @@ app.whenReady().then(async () => {
   session.defaultSession.setPermissionRequestHandler((_wc, permission, callback, details) =>
     callback(permissionAllowed(permission, details.requestingUrl, devUrl))
   )
+  // macOS slide show capture uses getDisplayMedia so the mouse pointer stays out of the picture.
+  if (process.platform === 'darwin') {
+    installDisplayMediaHandler(session.defaultSession, displayRoute, (types) =>
+      desktopCapturer.getSources({ types, thumbnailSize: { width: 0, height: 0 } })
+    )
+  }
 
   const root = app.getPath('userData')
   // Which program plays PowerPoint files here: by platform only (PowerPoint, LibreOffice, none).
@@ -1780,7 +1824,13 @@ app.whenReady().then(async () => {
     platform: process.platform,
     sessionType,
     x11Capture: x11Capture !== null,
-    ...(process.platform === 'linux' ? await probeLinux() : { hasSoffice: false, hasPyUno: false })
+    ...(process.platform === 'linux' ? await probeLinux() : { hasSoffice: false, hasPyUno: false }),
+    ...(process.platform === 'darwin'
+      ? {
+          hasPowerPoint: fs.existsSync('/Applications/Microsoft PowerPoint.app'),
+          macosMajor: macosMajorFromDarwin(os.release())
+        }
+      : {})
   })
   let lib: Library
   try {
@@ -1849,9 +1899,7 @@ Location: ${root}`
   // Linux: web pages in the PC's Chrome (opt-in). Chosen once here; a changed setting applies
   // after a restart, so a page on air is never touched.
   const chromeDetect: ChromeDetection =
-    process.platform === 'linux'
-      ? detectLinuxChrome(process.env)
-      : { browser: null, problem: null }
+    process.platform === 'linux' ? detectLinuxChrome(process.env) : { browser: null, problem: null }
   const webChoice = pickWebBackend({
     packaged: app.isPackaged,
     resourcesPath: process.resourcesPath,
@@ -1991,7 +2039,8 @@ Location: ${root}`
       packaged: app.isPackaged,
       platform: process.platform,
       env: process.env,
-      packageType: readPackageType()
+      packageType: readPackageType(),
+      appName: app.getName()
     })
   const updateManager = updatesEnabled
     ? new UpdateManager({

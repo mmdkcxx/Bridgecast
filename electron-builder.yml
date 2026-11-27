@@ -54,12 +54,18 @@ mac:
   # "damaged" on Apple silicon; ad-hoc gets the normal "cannot verify" prompt instead.
   identity: '-'
   entitlementsInherit: build/entitlements.mac.plist
+  extraResources:
+    # PowerPoint for Mac slide show helper; built in CI: scripts/build-mac-ppt-bridge.sh
+    - from: native/mac-ppt-bridge/dist
+      to: mac-ppt-bridge
+      filter:
+        - mac-ppt-bridge
   extendInfo:
     - NSCameraUsageDescription: Application requests access to the device's camera.
     - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
     - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
-    - NSAppleEventsUsageDescription: Bridgecast uses Keynote to convert PowerPoint files to PDF when you import them.
+    - NSAppleEventsUsageDescription: Bridgecast uses Microsoft PowerPoint or Keynote to convert PowerPoint files to PDF when you import them.
   notarize: false
 dmg:
   # One disk per architecture: the arch keeps the Intel and Apple silicon files apart.

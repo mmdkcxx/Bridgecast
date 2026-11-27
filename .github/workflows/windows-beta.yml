@@ -1,0 +1,75 @@
+# Builds the unsigned Windows test installer ("Bridgecast Beta").
+# - Runs on a push to test/mac-build or test/win-build, or by hand (optional ref).
+# - Never a release: Windows releases are built on the maintainer's PC with `npm run release:win`.
+# - The Beta has its own app id, name, install folder and data folder, so it installs next to
+#   Bridgecast and never replaces it; it never offers updates.
+# - Unsigned (no code signing certificate): SmartScreen warns on the first run.
+name: Windows Beta build
+
+on:
+  push:
+    branches: [test/mac-build, test/win-build]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Commit or branch to build from (defaults to the pushed ref)
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  win:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: PowerPoint slide show helper
+        run: dotnet build native/ppt-bridge/PptBridge.csproj -c Release --nologo
+      - name: WebView2 page helper
+        run: dotnet build native/web-bridge/WebBridge.csproj -c Release --nologo
+      - name: 'OMT libraries (not in the repo: OMT output is unavailable in this build)'
+        run: New-Item -ItemType Directory -Force resources/omt/win | Out-Null
+      # typecheck + bundle; `npm test` is not run here because some path tests assume POSIX
+      # separators and fail on Windows.
+      - run: npm run build
+      - name: Package (Bridgecast Beta)
+        # Own app id, name, install folder and data folder, so it installs next to Bridgecast
+        # and never replaces it; the Beta never offers updates (canSelfUpdate is off for a Beta
+        # app name). Bash: npx.cmd under PowerShell may split the quoted name at the space.
+        shell: bash
+        run: >-
+          npx electron-builder --win nsis --x64 --publish never
+          -c.appId=com.bridgecast.app.beta
+          -c.productName="Bridgecast Beta"
+          -c.extraMetadata.name=bridgecast-beta
+          -c.extraMetadata.productName="Bridgecast Beta"
+      - name: Check the helpers are packaged
+        run: |
+          $missing = @()
+          foreach ($helper in 'dist/win-unpacked/resources/ppt-bridge/ppt-bridge.exe',
+                              'dist/win-unpacked/resources/web-bridge/web-bridge.exe') {
+            if (-not (Test-Path $helper)) { $missing += $helper }
+          }
+          if ($missing.Count -gt 0) {
+            Write-Error "Missing packaged helpers: $($missing -join ', ')"
+            exit 1
+          }
+          Get-ChildItem dist/*.exe | Select-Object Name, Length
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bridgecast-beta-win-setup
+          path: dist/*-setup.exe
+          retention-days: 14
+          if-no-files-found: error

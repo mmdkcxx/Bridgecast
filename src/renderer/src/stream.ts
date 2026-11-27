@@ -63,6 +63,31 @@ export function desktopConstraints(
 }
 
 /**
+ * macOS: the slide show window is captured with getDisplayMedia, where `cursor: 'never'`
+ * keeps the mouse pointer out of the picture (the desktop getUserMedia path draws it).
+ */
+export function usesDisplayMedia(userAgent: string): boolean {
+  return /Macintosh|Mac OS X/.test(userAgent)
+}
+
+/** getDisplayMedia options for a slide show window: video only, capped like desktopConstraints, no pointer. */
+export function displayMediaOptions(
+  canvas: { width: number; height: number },
+  fps: number
+): DisplayMediaStreamOptions {
+  return {
+    video: {
+      width: { max: clampInt(canvas.width, 1, MAX_SIDE, 1920) },
+      height: { max: clampInt(canvas.height, 1, MAX_SIDE, 1080) },
+      frameRate: { max: clampInt(fps, 1, 60, 30) },
+      // `cursor` is not in the DOM typings yet.
+      cursor: 'never'
+    },
+    audio: false
+  } as DisplayMediaStreamOptions
+}
+
+/**
  * Frame rate of every video-only page capture: the operator monitor, the Prepare
  * preview and the ready-gate pre-capture. Chromium runs ONE capture per page for all
  * video-only requests (same device id `web-contents-media-stream://<p>:<f>`, across
@@ -171,6 +196,16 @@ export async function openStream(
     case 'desktop': {
       // Video only: PowerPoint's sound arrives through the audio pipe, not the capture.
       const sourceId = await window.api.slideshowSourceId(id)
+      if (usesDisplayMedia(navigator.userAgent)) {
+        // Main answers this request with the window it just looked up for this renderer.
+        try {
+          return await navigator.mediaDevices.getDisplayMedia(displayMediaOptions(canvas, fps))
+        } catch (e) {
+          console.warn('[slideshow] getDisplayMedia failed, using desktop capture:', e)
+          const again = await window.api.slideshowSourceId(id)
+          return navigator.mediaDevices.getUserMedia(desktopConstraints(again, canvas, fps))
+        }
+      }
       return navigator.mediaDevices.getUserMedia(desktopConstraints(sourceId, canvas, fps))
     }
   }
