@@ -7,6 +7,7 @@ import { AppearanceSection } from './AppearanceSection'
 import { SoundSection } from './SoundSection'
 import { ImportFormat } from './ImportFormat'
 import { WebChromeSection } from './WebChromeSection'
+import { ClickerSection } from './ClickerSection'
 import { ReleaseNotes } from './ReleaseNotes'
 import type { AudioSettings, PptImportFormat } from '../../../shared/settings'
 import { isUpdateSupported, type ReleaseNotesLine, type UpdateStatus } from '../../../shared/update'
@@ -220,6 +221,7 @@ export function SettingsDialog(p: Props): React.JSX.Element | null {
               <ImportFormat value={p.importFormat.value} onChange={p.importFormat.onChange} />
             </section>
           )}
+          <ClickerSection />
           <WebChromeSection />
           <SoundSection audio={p.audio} onSaved={p.onAudioSaved} />
           <AboutSection

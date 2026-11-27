@@ -363,13 +363,13 @@ function App({
 
   // Keyboard shortcuts (ignored while typing in an input).
   useEffect(() => {
+    // Home pauses the console keys (a clicker does nothing while the operator browses).
+    // The first-run tour owns the keys while it is open (nothing reaches the Program).
+    // Interact on the monitor takes the keys for the live page: no shortcut fires meanwhile.
+    const consoleKeysPaused = (): boolean =>
+      viewRef.current === 'home' || tourRef.current || keysClaimed()
     const onKey = (e: KeyboardEvent): void => {
-      // Home pauses the console keys (a clicker does nothing while the operator browses).
-      if (viewRef.current === 'home') return
-      // The first-run tour owns the keys while it is open (nothing reaches the Program).
-      if (tourRef.current) return
-      // Interact on the monitor takes the keys for the live page: no shortcut fires meanwhile.
-      if (keysClaimed()) return
+      if (consoleKeysPaused()) return
       // A focused update button must not fire on a clicker press: Space stays Program's
       // Next, and Enter stays with the button for keyboard users. The banner never focuses.
       if (isUpdateKeyTarget(document.activeElement)) {
@@ -388,7 +388,15 @@ function App({
       dispatch(a)
     }
     addEventListener('keydown', onKey)
-    return () => removeEventListener('keydown', onKey)
+    // Settings > Clicker in the background: PageDown/PageUp pressed while another app is in
+    // front arrive from main and pass the same pauses as a key press here.
+    const offClicker = window.api.onClickerPress((d) => {
+      if (!consoleKeysPaused()) dispatch({ type: d })
+    })
+    return () => {
+      removeEventListener('keydown', onKey)
+      offClicker()
+    }
   }, [dispatch])
 
   const selectEvent = useCallback(

@@ -31,6 +31,8 @@ describe('loadSettings / saveSettings', () => {
       sendContentOnly: true,
       pptImportFormat: 'odp',
       webChrome: false,
+      clickerBackground: false,
+      clickerKeys: 'page' as const,
       updates: { skippedVersion: null }
     })
     expect(loadSettings(file)).toEqual(DEFAULT_SETTINGS)
@@ -47,6 +49,8 @@ describe('loadSettings / saveSettings', () => {
       sendContentOnly: false,
       pptImportFormat: 'original' as const,
       webChrome: true,
+      clickerBackground: true,
+      clickerKeys: 'page' as const,
       updates: { skippedVersion: null }
     }
     saveSettings(file, s)
@@ -95,6 +99,8 @@ describe('hdmi settings', () => {
       sendContentOnly: true,
       pptImportFormat: 'odp',
       webChrome: false,
+      clickerBackground: false,
+      clickerKeys: 'page' as const,
       updates: { skippedVersion: null }
     })
   })
@@ -112,6 +118,8 @@ describe('hdmi settings', () => {
       sendContentOnly: true,
       pptImportFormat: 'odp',
       webChrome: false,
+      clickerBackground: false,
+      clickerKeys: 'page' as const,
       updates: { skippedVersion: null }
     })
   })
@@ -383,5 +391,23 @@ describe('mergeAudio', () => {
   })
   it('ignores unknown keys', () => {
     expect(mergeAudio(saved, { foo: 1, muted: true })).toEqual({ ...saved, muted: true })
+  })
+})
+
+describe('clicker in the background setting', () => {
+  it('is off when missing or not a boolean, and kept when true', () => {
+    expect(loadSettings(file).clickerBackground).toBe(false)
+    fs.writeFileSync(file, '{"clickerBackground": true}')
+    expect(loadSettings(file).clickerBackground).toBe(true)
+    fs.writeFileSync(file, '{"clickerBackground": "yes"}')
+    expect(loadSettings(file).clickerBackground).toBe(false)
+  })
+
+  it('uses PageDown/PageUp unless the arrow keys were chosen', () => {
+    expect(loadSettings(file).clickerKeys).toBe('page')
+    fs.writeFileSync(file, '{"clickerKeys": "arrows"}')
+    expect(loadSettings(file).clickerKeys).toBe('arrows')
+    fs.writeFileSync(file, '{"clickerKeys": "space"}')
+    expect(loadSettings(file).clickerKeys).toBe('page')
   })
 })

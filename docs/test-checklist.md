@@ -31,6 +31,14 @@ Catat hasil tiap butir: **OK**, atau tulis apa yang terjadi.
 - [ ] KV: unggah gambar di "Key visual (KV)"; saat STANDBY layar kedua menampilkan KV, saat ada slide tekan K (tally KV), B menggantikan KV dengan hitam, hapus KV mengembalikan STANDBY hitam. Gambar non 16:9 tampil utuh.
 - [ ] Freeze, lalu Next beberapa kali: layar kedua tetap, panel kanan "Preview" menampilkan slide yang dipilih. Unfreeze: layar kedua tetap di slide yang ditahan, posisi kembali ke slide itu, Next lanjut ke slide berikutnya.
 - [ ] Dengan clicker presentasi (jendela operator aktif): tombol maju/mundur menggeser slide, tombol layar hitam memicu Black.
+- [ ] Clicker di latar belakang, Settings > "Clicker in the background" **mati**: klik Notepad agar di depan, tekan maju/mundur clicker. Slide di Bridgecast tidak bergerak.
+- [ ] Setting **hidup**, Notepad atau WhatsApp di depan: maju/mundur clicker (PageDown/PageUp) menggeser slide yang tayang; "Continue to next deck" mati dan section tetap menghentikan clicker di akhir deck/section.
+- [ ] Setting hidup, jendela operator di depan: satu tekan = satu slide (tidak dobel).
+- [ ] Setting hidup, jendela Prepare di depan: perilaku sama seperti sebelumnya.
+- [ ] Setting hidup, operator di Home lalu klik Notepad: clicker tidak menggeser apa pun.
+- [ ] Matikan setting (Bridgecast lalu kembali ke Notepad): PageDown kembali menggulir Notepad.
+- [ ] Setting hidup, tutup Bridgecast: PageDown kembali bekerja normal di semua aplikasi.
+- [ ] Perfect Cue (panah kanan/kiri): Settings > "Clicker keys" pilih "Right / Left arrows", Notepad di depan: maju/mundur Perfect Cue menggeser slide; PageDown kembali menggulir Notepad. Ganti ke "PageDown / PageUp" saat Bridgecast di latar belakang (dari jendela Prepare): panah kembali menggerakkan kursor di Notepad.
 - [ ] "Continue to next deck" mati: clicker di slide terakhir tidak pindah ke deck berikutnya. Hidupkan: clicker lanjut ke deck berikutnya. Tutup dan buka aplikasi: pilihannya tetap.
 - [ ] Sections: buat event dengan beberapa deck, klik "Add section" dan beri nama. Hidupkan "Continue to next deck", lalu pakai clicker sampai slide terakhir sebelum section. Clicker harus berhenti di sana, panel "Up next" menampilkan "End of section". Tombol N pindah ke section berikutnya, Shift+N kembali.
 - [ ] Cabut kabel HDMI saat live. Layar operator tidak tertutup; status menjadi "HDMI hidden".

@@ -4,6 +4,7 @@ import {
   BrowserWindow,
   desktopCapturer,
   dialog,
+  globalShortcut,
   ipcMain,
   MessageChannelMain,
   nativeImage,
@@ -45,6 +46,7 @@ import {
   type EngineInfo
 } from './platform'
 import { readFolderDeck } from './import/folder'
+import { BackgroundClicker } from './background-clicker'
 import { readVideoDeck } from './import/video-file'
 import { grabPoster } from './import/grab-poster'
 import { VIDEO_EXTENSIONS_RE } from '../shared/video-file'
@@ -90,6 +92,7 @@ import {
   sanitizePptImportFormat,
   sanitizeSettings,
   type AudioSettings,
+  type ClickerKeys,
   type HdmiSettings,
   type PptImportFormat
 } from '../shared/settings'
@@ -1420,6 +1423,14 @@ class SettingsStore {
     return this.save({ ...this.settings, webChrome })
   }
 
+  saveClickerBackground(clickerBackground: boolean): Settings {
+    return this.save({ ...this.settings, clickerBackground })
+  }
+
+  saveClickerKeys(clickerKeys: ClickerKeys): Settings {
+    return this.save({ ...this.settings, clickerKeys })
+  }
+
   saveAutoAdvance(autoAdvance: boolean): Settings {
     return this.save({ ...this.settings, autoAdvance })
   }
@@ -2064,6 +2075,38 @@ Location: ${root}`
     updateManager,
     webChrome
   )
+
+  // Settings > Clicker in the background: the clicker keys (PageDown/PageUp or Right/Left) run
+  // Next/Prev while no Bridgecast window has focus. The press goes to the operator window, which applies its usual key guards.
+  const clicker = new BackgroundClicker(
+    {
+      register: (accel, cb) => globalShortcut.register(accel, cb),
+      unregister: (accel) => globalShortcut.unregister(accel)
+    },
+    (d) => broadcastToOperator(Broadcast.clickerPress, d)
+  )
+  clicker.setKeys(settings.get().clickerKeys)
+  clicker.setEnabled(settings.get().clickerBackground)
+  clicker.setAppFocused(BrowserWindow.getFocusedWindow() !== null)
+  app.on('browser-window-focus', () => clicker.setAppFocused(true))
+  // Deferred: moving focus between two Bridgecast windows fires blur before focus.
+  app.on('browser-window-blur', () =>
+    setImmediate(() => clicker.setAppFocused(BrowserWindow.getFocusedWindow() !== null))
+  )
+  app.on('will-quit', () => clicker.dispose())
+  handle(Invoke.clickerSetBackground, (on) => {
+    if (typeof on !== 'boolean') throw new Error('Clicker setting must be on or off')
+    const saved = settings.saveClickerBackground(on)
+    clicker.setEnabled(on)
+    return saved
+  })
+  handle(Invoke.clickerSetKeys, (keys) => {
+    if (keys !== 'page' && keys !== 'arrows')
+      throw new Error('Choose PageDown/PageUp or the arrow keys')
+    const saved = settings.saveClickerKeys(keys)
+    clicker.setKeys(keys)
+    return saved
+  })
 
   const startOutputs = (): void => {
     hdmi.start()

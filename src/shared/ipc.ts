@@ -1,8 +1,14 @@
-import type { DeckMeta, EventMeta, EventSummary, Playback } from './types'
+import type { ClickerDirection, DeckMeta, EventMeta, EventSummary, Playback } from './types'
 import type { OrderItem } from './sections'
 import type { Action, ProgramState } from './program'
 import type { NdiSettings, NdiStatus, OmtSettings, OmtStatus } from './omt'
-import type { AudioSettings, HdmiSettings, PptImportFormat, Settings } from './settings'
+import type {
+  AudioSettings,
+  ClickerKeys,
+  HdmiSettings,
+  PptImportFormat,
+  Settings
+} from './settings'
 import type { DisplayInfo } from './displays'
 import type { Canvas, DeckFit } from './canvas'
 import type { NewEventOptions } from './event-outputs'
@@ -49,6 +55,8 @@ export const Invoke = {
   programDispatch: 'program:dispatch',
   programGet: 'program:get',
   settingsGet: 'settings:get',
+  clickerSetBackground: 'clicker:setBackground',
+  clickerSetKeys: 'clicker:setKeys',
   appVersion: 'app:version',
   displaysList: 'displays:list',
   hdmiSet: 'hdmi:set',
@@ -138,7 +146,8 @@ export const Broadcast = {
   slideshowStatus: 'slideshow:status',
   deckPending: 'deck:pending',
   deckEditError: 'deck:editError',
-  updateStatus: 'update:status'
+  updateStatus: 'update:status',
+  clickerPress: 'clicker:press'
 } as const
 
 /** Main → OMT output window: carries the MessagePort the window sends program sound on. */
@@ -271,6 +280,10 @@ export interface InvokeMap {
   'program:dispatch': { args: [action: Action]; result: ProgramState }
   'program:get': { args: []; result: Session }
   'settings:get': { args: []; result: Settings }
+  /** Settings > Clicker in the background; applies at once. */
+  'clicker:setBackground': { args: [on: boolean]; result: Settings }
+  /** Settings > Clicker keys: PageDown/PageUp or Right/Left; applies at once. */
+  'clicker:setKeys': { args: [keys: ClickerKeys]; result: Settings }
   'displays:list': { args: []; result: DisplayInfo[] }
   /** Validated in main against the connected displays; saves and applies at once. */
   'hdmi:set': { args: [hdmi: HdmiSettings]; result: Settings }
@@ -394,6 +407,8 @@ export interface BroadcastMap {
   'deck:pending': DeckPendingEvent
   'deck:editError': DeckEditErrorEvent
   'update:status': UpdateStatus
+  /** A clicker key pressed while no Bridgecast window has focus (operator window only). */
+  'clicker:press': ClickerDirection
 }
 
 export type InvokeChannel = keyof InvokeMap
@@ -465,6 +480,8 @@ export interface Api {
   onProgramState(cb: (s: ProgramState) => void): () => void
   onImportProgress(cb: (p: ImportProgress) => void): () => void
   getSettings(): Promise<Settings>
+  setClickerBackground(on: boolean): Promise<Settings>
+  setClickerKeys(keys: ClickerKeys): Promise<Settings>
   /** The app version (package.json), for the About section of Settings. */
   getAppVersion(): Promise<string>
   listDisplays(): Promise<DisplayInfo[]>
@@ -571,5 +588,6 @@ export interface Api {
   /** Hides this version from future announcements. */
   skipUpdate(): Promise<UpdateStatus>
   onUpdateStatus(cb: (s: UpdateStatus) => void): () => void
+  onClickerPress(cb: (d: ClickerDirection) => void): () => void
   pathForFile(file: File): string
 }

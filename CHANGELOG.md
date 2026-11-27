@@ -4,6 +4,10 @@ Versions restart at 0.x because the app is in development.
 
 ## [Unreleased]
 
+### Added
+
+- Settings > Clicker in the background: when turned on, a presentation clicker's PageDown and PageUp keep moving the live slide while another app is in front (for example while you reply to a message or prepare the next session's files). Off by default. "Clicker keys" chooses PageDown / PageUp (default) or the Right / Left arrows for clickers that send arrows, such as Perfect Cue. While it is on, the two chosen keys move slides from any keyboard on this PC and do not reach other apps. Not verified with a real clicker on Windows yet.
+
 ## [0.1.15] - 2026-11-24
 
 ### Fixed

@@ -6,6 +6,8 @@ import { DEFAULT_NDI, DEFAULT_OMT } from '../shared/omt'
 import { DEFAULT_UPDATES } from '../shared/update'
 import {
   DEFAULT_AUDIO,
+  DEFAULT_CLICKER_BACKGROUND,
+  DEFAULT_CLICKER_KEYS,
   DEFAULT_HDMI,
   DEFAULT_PPT_IMPORT_FORMAT,
   DEFAULT_SEND_CONTENT_ONLY,
@@ -27,6 +29,8 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   sendContentOnly: DEFAULT_SEND_CONTENT_ONLY,
   pptImportFormat: DEFAULT_PPT_IMPORT_FORMAT,
   webChrome: DEFAULT_WEB_CHROME,
+  clickerBackground: DEFAULT_CLICKER_BACKGROUND,
+  clickerKeys: DEFAULT_CLICKER_KEYS,
   updates: DEFAULT_UPDATES
 })
 
